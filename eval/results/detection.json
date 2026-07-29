@@ -1,0 +1,753 @@
+{
+  "detector": "nemoretriever-page-elements-v2",
+  "table_pages_reference": [
+    6,
+    7,
+    8,
+    19
+  ],
+  "detected_table_pages": [
+    6,
+    7,
+    8,
+    17,
+    19
+  ],
+  "page_recall": "4/4",
+  "false_positive_pages": [
+    17
+  ],
+  "per_page": [
+    {
+      "page": 1,
+      "counts": {
+        "title": 4
+      },
+      "confidences": {
+        "title": [
+          0.87,
+          0.853,
+          0.801,
+          0.189
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.2726,
+            "y_min": 0.123,
+            "x_max": 0.7287,
+            "y_max": 0.1755,
+            "confidence": 0.8701
+          },
+          {
+            "x_min": 0.1737,
+            "y_min": 0.7517,
+            "x_max": 0.315,
+            "y_max": 0.7688,
+            "confidence": 0.8533
+          },
+          {
+            "x_min": 0.4608,
+            "y_min": 0.3989,
+            "x_max": 0.5387,
+            "y_max": 0.4146,
+            "confidence": 0.8015
+          },
+          {
+            "x_min": 0.0169,
+            "y_min": 0.2601,
+            "x_max": 0.0692,
+            "y_max": 0.7096,
+            "confidence": 0.1894
+          }
+        ]
+      }
+    },
+    {
+      "page": 2,
+      "counts": {
+        "title": 1,
+        "infographic": 1
+      },
+      "confidences": {
+        "title": [
+          0.825
+        ],
+        "infographic": [
+          0.526
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1724,
+            "y_min": 0.7772,
+            "x_max": 0.2815,
+            "y_max": 0.7941,
+            "confidence": 0.8251
+          }
+        ],
+        "infographic": [
+          {
+            "x_min": 0.1743,
+            "y_min": 0.0895,
+            "x_max": 0.8315,
+            "y_max": 0.3002,
+            "confidence": 0.5256
+          }
+        ]
+      }
+    },
+    {
+      "page": 3,
+      "counts": {
+        "title": 6
+      },
+      "confidences": {
+        "title": [
+          0.865,
+          0.863,
+          0.805,
+          0.801,
+          0.121,
+          0.101
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1721,
+            "y_min": 0.5532,
+            "x_max": 0.3261,
+            "y_max": 0.5689,
+            "confidence": 0.865
+          },
+          {
+            "x_min": 0.1729,
+            "y_min": 0.7342,
+            "x_max": 0.3418,
+            "y_max": 0.7492,
+            "confidence": 0.8633
+          },
+          {
+            "x_min": 0.1724,
+            "y_min": 0.8585,
+            "x_max": 0.2774,
+            "y_max": 0.8749,
+            "confidence": 0.8046
+          },
+          {
+            "x_min": 0.1724,
+            "y_min": 0.2262,
+            "x_max": 0.2669,
+            "y_max": 0.2406,
+            "confidence": 0.801
+          },
+          {
+            "x_min": 0.1738,
+            "y_min": 0.2508,
+            "x_max": 0.3339,
+            "y_max": 0.2662,
+            "confidence": 0.1211
+          },
+          {
+            "x_min": 0.1751,
+            "y_min": 0.3804,
+            "x_max": 0.3101,
+            "y_max": 0.395,
+            "confidence": 0.1005
+          }
+        ]
+      }
+    },
+    {
+      "page": 4,
+      "counts": {
+        "title": 6
+      },
+      "confidences": {
+        "title": [
+          0.87,
+          0.867,
+          0.86,
+          0.828,
+          0.392,
+          0.295
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1712,
+            "y_min": 0.8171,
+            "x_max": 0.4437,
+            "y_max": 0.8333,
+            "confidence": 0.8697
+          },
+          {
+            "x_min": 0.1714,
+            "y_min": 0.4653,
+            "x_max": 0.3154,
+            "y_max": 0.4834,
+            "confidence": 0.8668
+          },
+          {
+            "x_min": 0.1722,
+            "y_min": 0.6233,
+            "x_max": 0.4601,
+            "y_max": 0.6394,
+            "confidence": 0.8603
+          },
+          {
+            "x_min": 0.1727,
+            "y_min": 0.1796,
+            "x_max": 0.2812,
+            "y_max": 0.1956,
+            "confidence": 0.828
+          },
+          {
+            "x_min": 0.1747,
+            "y_min": 0.2351,
+            "x_max": 0.2611,
+            "y_max": 0.2491,
+            "confidence": 0.3921
+          },
+          {
+            "x_min": 0.1746,
+            "y_min": 0.2937,
+            "x_max": 0.2815,
+            "y_max": 0.3083,
+            "confidence": 0.2949
+          }
+        ]
+      }
+    },
+    {
+      "page": 5,
+      "counts": {
+        "title": 4
+      },
+      "confidences": {
+        "title": [
+          0.866,
+          0.86,
+          0.86,
+          0.797
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1722,
+            "y_min": 0.1778,
+            "x_max": 0.4306,
+            "y_max": 0.194,
+            "confidence": 0.8657
+          },
+          {
+            "x_min": 0.1734,
+            "y_min": 0.4737,
+            "x_max": 0.3311,
+            "y_max": 0.4892,
+            "confidence": 0.8601
+          },
+          {
+            "x_min": 0.1717,
+            "y_min": 0.7145,
+            "x_max": 0.46,
+            "y_max": 0.7308,
+            "confidence": 0.8599
+          },
+          {
+            "x_min": 0.1727,
+            "y_min": 0.6842,
+            "x_max": 0.2695,
+            "y_max": 0.7005,
+            "confidence": 0.7972
+          }
+        ]
+      }
+    },
+    {
+      "page": 6,
+      "counts": {
+        "table": 1,
+        "title": 3
+      },
+      "confidences": {
+        "table": [
+          0.858
+        ],
+        "title": [
+          0.872,
+          0.864,
+          0.862
+        ]
+      },
+      "boxes": {
+        "table": [
+          {
+            "x_min": 0.172,
+            "y_min": 0.0961,
+            "x_max": 0.8331,
+            "y_max": 0.2735,
+            "confidence": 0.8578
+          }
+        ],
+        "title": [
+          {
+            "x_min": 0.1728,
+            "y_min": 0.3547,
+            "x_max": 0.4421,
+            "y_max": 0.3708,
+            "confidence": 0.8723
+          },
+          {
+            "x_min": 0.1729,
+            "y_min": 0.8449,
+            "x_max": 0.3312,
+            "y_max": 0.8602,
+            "confidence": 0.8636
+          },
+          {
+            "x_min": 0.1721,
+            "y_min": 0.507,
+            "x_max": 0.431,
+            "y_max": 0.5232,
+            "confidence": 0.8618
+          }
+        ]
+      }
+    },
+    {
+      "page": 7,
+      "counts": {
+        "table": 1,
+        "chart": 1,
+        "title": 4
+      },
+      "confidences": {
+        "table": [
+          0.941
+        ],
+        "chart": [
+          0.062
+        ],
+        "title": [
+          0.846,
+          0.549,
+          0.463,
+          0.144
+        ]
+      },
+      "boxes": {
+        "table": [
+          {
+            "x_min": 0.1724,
+            "y_min": 0.2379,
+            "x_max": 0.8271,
+            "y_max": 0.4481,
+            "confidence": 0.9412
+          }
+        ],
+        "chart": [
+          {
+            "x_min": 0.1762,
+            "y_min": 0.0881,
+            "x_max": 0.8296,
+            "y_max": 0.1768,
+            "confidence": 0.0616
+          }
+        ],
+        "title": [
+          {
+            "x_min": 0.173,
+            "y_min": 0.5839,
+            "x_max": 0.3444,
+            "y_max": 0.5997,
+            "confidence": 0.8458
+          },
+          {
+            "x_min": 0.1724,
+            "y_min": 0.8427,
+            "x_max": 0.3147,
+            "y_max": 0.8584,
+            "confidence": 0.5488
+          },
+          {
+            "x_min": 0.1727,
+            "y_min": 0.7099,
+            "x_max": 0.3131,
+            "y_max": 0.7247,
+            "confidence": 0.4632
+          },
+          {
+            "x_min": 0.1745,
+            "y_min": 0.6108,
+            "x_max": 0.3322,
+            "y_max": 0.6256,
+            "confidence": 0.1444
+          }
+        ]
+      }
+    },
+    {
+      "page": 8,
+      "counts": {
+        "table": 2,
+        "chart": 1,
+        "title": 2
+      },
+      "confidences": {
+        "table": [
+          0.931,
+          0.893
+        ],
+        "chart": [
+          0.923
+        ],
+        "title": [
+          0.845,
+          0.74
+        ]
+      },
+      "boxes": {
+        "table": [
+          {
+            "x_min": 0.1648,
+            "y_min": 0.2463,
+            "x_max": 0.8467,
+            "y_max": 0.4016,
+            "confidence": 0.9315
+          },
+          {
+            "x_min": 0.1699,
+            "y_min": 0.095,
+            "x_max": 0.8322,
+            "y_max": 0.2287,
+            "confidence": 0.8933
+          }
+        ],
+        "chart": [
+          {
+            "x_min": 0.1699,
+            "y_min": 0.6254,
+            "x_max": 0.8322,
+            "y_max": 0.7643,
+            "confidence": 0.9229
+          }
+        ],
+        "title": [
+          {
+            "x_min": 0.1729,
+            "y_min": 0.7955,
+            "x_max": 0.3269,
+            "y_max": 0.8129,
+            "confidence": 0.8452
+          },
+          {
+            "x_min": 0.1742,
+            "y_min": 0.5156,
+            "x_max": 0.4397,
+            "y_max": 0.5303,
+            "confidence": 0.7395
+          }
+        ]
+      }
+    },
+    {
+      "page": 9,
+      "counts": {
+        "title": 3
+      },
+      "confidences": {
+        "title": [
+          0.848,
+          0.621,
+          0.226
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1729,
+            "y_min": 0.6269,
+            "x_max": 0.2968,
+            "y_max": 0.6436,
+            "confidence": 0.8478
+          },
+          {
+            "x_min": 0.1742,
+            "y_min": 0.3442,
+            "x_max": 0.3815,
+            "y_max": 0.359,
+            "confidence": 0.621
+          },
+          {
+            "x_min": 0.1751,
+            "y_min": 0.4972,
+            "x_max": 0.3848,
+            "y_max": 0.5116,
+            "confidence": 0.2256
+          }
+        ]
+      }
+    },
+    {
+      "page": 10,
+      "counts": {
+        "title": 3
+      },
+      "confidences": {
+        "title": [
+          0.873,
+          0.854,
+          0.799
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1721,
+            "y_min": 0.0902,
+            "x_max": 0.3134,
+            "y_max": 0.1084,
+            "confidence": 0.8728
+          },
+          {
+            "x_min": 0.1739,
+            "y_min": 0.3421,
+            "x_max": 0.3335,
+            "y_max": 0.3601,
+            "confidence": 0.8535
+          },
+          {
+            "x_min": 0.1726,
+            "y_min": 0.4625,
+            "x_max": 0.2699,
+            "y_max": 0.4789,
+            "confidence": 0.7989
+          }
+        ]
+      }
+    },
+    {
+      "page": 11,
+      "counts": {},
+      "confidences": {},
+      "boxes": {}
+    },
+    {
+      "page": 12,
+      "counts": {},
+      "confidences": {},
+      "boxes": {}
+    },
+    {
+      "page": 13,
+      "counts": {},
+      "confidences": {},
+      "boxes": {}
+    },
+    {
+      "page": 14,
+      "counts": {},
+      "confidences": {},
+      "boxes": {}
+    },
+    {
+      "page": 15,
+      "counts": {},
+      "confidences": {},
+      "boxes": {}
+    },
+    {
+      "page": 16,
+      "counts": {},
+      "confidences": {},
+      "boxes": {}
+    },
+    {
+      "page": 17,
+      "counts": {
+        "table": 1,
+        "title": 6
+      },
+      "confidences": {
+        "table": [
+          0.118
+        ],
+        "title": [
+          0.866,
+          0.861,
+          0.856,
+          0.829,
+          0.201,
+          0.122
+        ]
+      },
+      "boxes": {
+        "table": [
+          {
+            "x_min": 0.67,
+            "y_min": 0.3752,
+            "x_max": 0.7926,
+            "y_max": 0.473,
+            "confidence": 0.118
+          }
+        ],
+        "title": [
+          {
+            "x_min": 0.1713,
+            "y_min": 0.1559,
+            "x_max": 0.4117,
+            "y_max": 0.1739,
+            "confidence": 0.8659
+          },
+          {
+            "x_min": 0.1731,
+            "y_min": 0.6898,
+            "x_max": 0.3981,
+            "y_max": 0.7086,
+            "confidence": 0.861
+          },
+          {
+            "x_min": 0.25,
+            "y_min": 0.0858,
+            "x_max": 0.7539,
+            "y_max": 0.1288,
+            "confidence": 0.8558
+          },
+          {
+            "x_min": 0.1721,
+            "y_min": 0.3033,
+            "x_max": 0.3706,
+            "y_max": 0.3212,
+            "confidence": 0.8289
+          },
+          {
+            "x_min": 0.3598,
+            "y_min": 0.3566,
+            "x_max": 0.5942,
+            "y_max": 0.3705,
+            "confidence": 0.2008
+          },
+          {
+            "x_min": 0.668,
+            "y_min": 0.3756,
+            "x_max": 0.7591,
+            "y_max": 0.3876,
+            "confidence": 0.1221
+          }
+        ]
+      }
+    },
+    {
+      "page": 18,
+      "counts": {
+        "title": 6
+      },
+      "confidences": {
+        "title": [
+          0.886,
+          0.876,
+          0.862,
+          0.849,
+          0.705,
+          0.597
+        ]
+      },
+      "boxes": {
+        "title": [
+          {
+            "x_min": 0.1697,
+            "y_min": 0.0897,
+            "x_max": 0.523,
+            "y_max": 0.1089,
+            "confidence": 0.8863
+          },
+          {
+            "x_min": 0.1718,
+            "y_min": 0.6498,
+            "x_max": 0.4475,
+            "y_max": 0.6675,
+            "confidence": 0.8763
+          },
+          {
+            "x_min": 0.1726,
+            "y_min": 0.5027,
+            "x_max": 0.4381,
+            "y_max": 0.5197,
+            "confidence": 0.8618
+          },
+          {
+            "x_min": 0.1727,
+            "y_min": 0.8391,
+            "x_max": 0.3106,
+            "y_max": 0.8563,
+            "confidence": 0.8487
+          },
+          {
+            "x_min": 0.1747,
+            "y_min": 0.3451,
+            "x_max": 0.3709,
+            "y_max": 0.36,
+            "confidence": 0.7048
+          },
+          {
+            "x_min": 0.1733,
+            "y_min": 0.2472,
+            "x_max": 0.3676,
+            "y_max": 0.2626,
+            "confidence": 0.5971
+          }
+        ]
+      }
+    },
+    {
+      "page": 19,
+      "counts": {
+        "table": 1,
+        "title": 2
+      },
+      "confidences": {
+        "table": [
+          0.929
+        ],
+        "title": [
+          0.871,
+          0.851
+        ]
+      },
+      "boxes": {
+        "table": [
+          {
+            "x_min": 0.1686,
+            "y_min": 0.0952,
+            "x_max": 0.8296,
+            "y_max": 0.2523,
+            "confidence": 0.9288
+          }
+        ],
+        "title": [
+          {
+            "x_min": 0.1729,
+            "y_min": 0.4045,
+            "x_max": 0.3683,
+            "y_max": 0.4231,
+            "confidence": 0.8713
+          },
+          {
+            "x_min": 0.1706,
+            "y_min": 0.5513,
+            "x_max": 0.4752,
+            "y_max": 0.5708,
+            "confidence": 0.8507
+          }
+        ]
+      }
+    }
+  ],
+  "reference_provenance": "verified by page-image inspection 2026-07-29; earlier LaTeX-match-derived set {2,4,6,7,19} was wrong on pages 2,4,8"
+}

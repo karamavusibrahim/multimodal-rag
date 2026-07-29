@@ -1,0 +1,10 @@
+{
+  "embed_model": "nvidia/nemotron-3-embed-1b",
+  "n_elements": 98,
+  "dim": 2048,
+  "kinds": {
+    "text": 96,
+    "figure": 1,
+    "table": 1
+  }
+}
