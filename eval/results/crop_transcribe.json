@@ -1,0 +1,133 @@
+{
+  "arxiv_id": "2005.11401",
+  "model": "nvidia/nemotron-nano-12b-v2-vl",
+  "n_transcripts": 6,
+  "per_table": [
+    {
+      "table": 1,
+      "n_numbers": 26,
+      "recall": 1.0,
+      "precision": 1.0,
+      "overlap": 26,
+      "page": 19,
+      "box": 0,
+      "baseline_recall": 1.0,
+      "baseline_kind": "text"
+    },
+    {
+      "table": 2,
+      "n_numbers": 27,
+      "recall": 0.9259259259259259,
+      "precision": 0.3968253968253968,
+      "overlap": 25,
+      "page": 6,
+      "box": 0,
+      "baseline_recall": 0.1111111111111111,
+      "baseline_kind": "text"
+    },
+    {
+      "table": 3,
+      "n_numbers": 23,
+      "recall": 1.0,
+      "precision": 0.36507936507936506,
+      "overlap": 23,
+      "page": 6,
+      "box": 0,
+      "baseline_recall": 0.13043478260869565,
+      "baseline_kind": "text"
+    },
+    {
+      "table": 4,
+      "n_numbers": 9,
+      "recall": 0.3333333333333333,
+      "precision": 0.3333333333333333,
+      "overlap": 3,
+      "page": 7,
+      "box": 0,
+      "baseline_recall": 0.3333333333333333,
+      "baseline_kind": "table"
+    },
+    {
+      "table": 5,
+      "n_numbers": 10,
+      "recall": 1.0,
+      "precision": 1.0,
+      "overlap": 10,
+      "page": 8,
+      "box": 1,
+      "baseline_recall": 0.2,
+      "baseline_kind": "text"
+    },
+    {
+      "table": 6,
+      "n_numbers": 10,
+      "recall": 0.3,
+      "precision": 0.047619047619047616,
+      "overlap": 3,
+      "page": 6,
+      "box": 0,
+      "baseline_recall": 0.2,
+      "baseline_kind": "text"
+    },
+    {
+      "table": 7,
+      "n_numbers": 59,
+      "recall": 0.8983050847457628,
+      "precision": 1.0,
+      "overlap": 53,
+      "page": 8,
+      "box": 0,
+      "baseline_recall": 0.0847457627118644,
+      "baseline_kind": "text"
+    },
+    {
+      "table": 8,
+      "n_numbers": 41,
+      "recall": 0.1951219512195122,
+      "precision": 0.12698412698412698,
+      "overlap": 8,
+      "page": 6,
+      "box": 0,
+      "baseline_recall": 0.04878048780487805,
+      "baseline_kind": "text"
+    }
+  ],
+  "transcripts": [
+    {
+      "page": 6,
+      "box": 0,
+      "confidence": 0.8578,
+      "text": "Table 1: Open-Domain QA Test Scores. For TQA, left column uses the standard test set for Open-Domain QA, right column uses the TQA-Wiki test set. See Appendix D for further details.\n\n| Model | NQ | TQA | WQ | CT |\n|-------|----|-----|----|----|\n| Closed Book T5-11B [52] | 34.5 | - /50.1 | 37.4 | - |\n| T5-11B+SSM[52] | 36.6 | - /60.5 | 44.7 | - |\n| Open Book REALM [20] | 40.4 | - / - | 40.7 | 46.8 |\n| DPR [26] | 41.5 | 57.9/ - | 41.1 | 50.6 |\n| RAG-Token | 44.1 | 55.2/66.1 | 45.5 | 50.0 |\n| RAG-Seq. | 44.5 | 56.8/68.0 | 45.2 | 52.2 |\n\nTable 2: Generation and classification Test Scores. MS-MARCO SotA is [4], FEVER-3 is [68] and FEVER-2 is [57] \\*Uses gold context/evidence. Best model without gold access underlined.\n\n| Model | Jeopardy B-1 | QA B-1 | MSMARCO R-L | FEVER-3 B-1 | FEVER-2 Label Acc. |\n|-------|--------------|--------|-------------|-------------|---------------------|\n| SotA | - | - | 49.8\\* | 49.9\\* | 76.8 92.2\\* |\n| BART | 15.1 | 19.7 | 38.2 | 41.6 | 64.0 81.1 |\n| RAG-Tok. | 17.3 | 22.2 | 40.1 | 41.5 | 72.5 89.5 |\n| RAG-Seq. | 14.7 | 21.4 | 40.8 | 44.2 | 72.5 89.5 |"
+    },
+    {
+      "page": 7,
+      "box": 0,
+      "confidence": 0.9412,
+      "text": "| Task | Input | Model | Generation |\n|---|---|---|---|\n| \\multirow{6}{*}{MS- MARCO} | \\multirow{3}{*}{define middle ear} | BART | The middle ear is the part of the ear between the middle ear and the nose. |\n| | | RAG-T | The middle ear is the portion of the ear internal to the eardrum. |\n| | | RAG-S | The middle ear includes the tympanic cavity and the three ossicles. |\n| | \\multirow{3}{*}{what currency needed in scotland} | BART | The currency needed in Scotland is Pound sterling. |\n| | | RAG-T | Pound is the currency needed in Scotland. |\n| | | RAG-S | The currency needed in Scotland is the pound sterling. |\n| \\multirow{6}{*}{Jeopardy Question Gener -ation} | \\multirow{3}{*}{Washington} | BART | This state has the largest number of counties in the U.S. |\n| | | RAG-T | It's the only U.S. state named for a U.S. president |\n| | | RAG-S | It's the state where you'll find Mount Rainier National Park |\n| | \\multirow{3}{*}{The Divine Comedy} | BART | This epic poem by Dante is divided into 3 parts: the Inferno, the Purgatorio & the Purgatorio |\n| | | RAG-T | Dante's \"Inferno\" is the first part of this epic poem |\n| | | RAG-S | This 14th century work is divided into 3 sections: \"Inferno\", \"Purgatorio\" & \"Paradiso\" |"
+    },
+    {
+      "page": 8,
+      "box": 0,
+      "confidence": 0.9315,
+      "text": "| Model | NQ | TQA | WQ | CT | Jeopardy-QGen | MSMarco | FVR-3 | FVR-2 |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n|  |  | Exact Match |  |  | B-1 | QB-1 | R-L | B-1 |\n| RAG-Token-BM25 | 29.7 | 41.5 | 32.1 | 33.1 | 17.5 | 22.3 | 55.5 | 48.4 |\n| RAG-Sequence-BM25 | 31.8 | 44.1 | 36.6 | 33.8 | 11.1 | 19.5 | 56.5 | 46.9 |\n| RAG-Token-Frozen | 37.8 | 50.1 | 37.1 | 51.1 | 16.7 | 21.7 | 55.9 | 49.4 |\n| RAG-Sequence-Frozen | 41.2 | 52.1 | 41.8 | 52.6 | 11.8 | 19.6 | 56.7 | 47.3 |\n| RAG-Token | 43.5 | 54.8 | 46.5 | 51.9 | 17.9 | 22.6 | 56.2 | 49.4 |\n| RAG-Sequence | 44.0 | 55.8 | 44.9 | 53.4 | 15.3 | 21.5 | 57.2 | 47.5 |"
+    },
+    {
+      "page": 8,
+      "box": 1,
+      "confidence": 0.8933,
+      "text": "|  | Factuality | Specificity |\n| --- | --- | --- |\n| BART better | 7.1% | 16.8% |\n| RAG better | 42.7% | 37.4% |\n| Both good | 11.7% | 11.8% |\n| Both poor | 17.7% | 6.9% |\n| No majority | 20.8% | 20.1% |"
+    },
+    {
+      "page": 17,
+      "box": 0,
+      "confidence": 0.118,
+      "text": "| Sentence A is more true | 1 |\n| --- | --- |\n| Sentence B is more true | 2 |\n| Both sentences are true | 3 |\n| Both sentences are completely untrue | 4 |"
+    },
+    {
+      "page": 19,
+      "box": 0,
+      "confidence": 0.9288,
+      "text": "| Task | Train | Development | Test |\n|---|---|---|---|\n| Natural Questions | 79169 | 8758 | 3611 |\n| TriviaQA | 78786 | 8838 | 11314 |\n| WebQuestions | 3418 | 362 | 2033 |\n| CuratedTrec | 635 | 134 | 635 |\n| Jeopardy Question Generation | 97392 | 13714 | 26849 |\n| MS-MARCO | 153726 | 12468 | 101093* |\n| FEVER-3-way | 145450 | 10000 | 10000 |\n| FEVER-2-way | 96966 | 6666 | 6666 |"
+    }
+  ]
+}

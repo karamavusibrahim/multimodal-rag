@@ -323,17 +323,41 @@ first with a dedicated model, then transcribe — is validated on the detection
 half at a cost of one cheap CV call per page. This is NVIDIA's own nv-ingest
 architecture, and it runs hosted with the same API key.
 
+### 6.1 The second half, measured: crop-then-transcribe (optional pass)
+
+`eval/crop_transcribe.py` (2026-07-30, optional — the whole-page baseline is
+untouched) crops each detected table box and sends it to the same VLM as a
+dedicated table transcription, scored against the same LaTeX ground truth:
+
+| table | whole-page recall | crop recall |
+|---|---|---|
+| 1 | 1.000 | 1.000 |
+| 2 | 0.111 | **0.926** |
+| 3 | 0.130 | **1.000** |
+| 4 | 0.333 | 0.333 |
+| 5 | 0.200 | **1.000** |
+| 6 | 0.200 | 0.300 |
+| 7 | 0.085 | **0.898** |
+| 8 | 0.049 | 0.195 |
+| **mean** | **0.264** | **0.707** |
+
+Coverage at the baseline's own match thresholds (≥3 overlap, ≥20% recall):
+**2/8 → 6/8.** Cost: one VLM call per detected box — six calls for the whole
+paper.
+
+The same model that read 1 table off whole pages reads 4 tables at ≥0.9 recall
+when handed crops: the limiting factor was never transcription ability, it was
+**attention allocation on a full page** — which is what §2.3 hypothesized and
+the detection pass (§6) made fixable. The residual misses line up with the
+detector's one known gap: tables 4 and 8 sit on the page where two boxes were
+drawn for three tables, so their content was simply never cropped.
+
 Remaining experiments, in order of leverage:
 
-1. **Crop each detected table box and send it as a dedicated VLM table read**,
-   then re-run `table_accuracy.py` against the crops — tests whether routed
-   transcription recovers the tables the single-prompt read only partially
-   transcribed (the boxes are already in `eval/results/detection.json`,
-   normalized coordinates).
-2. **`nemotron-parse` (the renamed nemoretriever-parse) as a comparison arm** —
+1. **`nemotron-parse` (the renamed nemoretriever-parse) as a comparison arm** —
    confirmed present in the hosted catalog; typed elements + reading order in
    one call.
-3. **Header/label scoring** — the metric that decides whether cell-level
+2. **Header/label scoring** — the metric that decides whether cell-level
    citation is viable (§5), and the only one of these that requires new
    ground-truth parsing rather than new calls.
 

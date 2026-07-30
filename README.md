@@ -189,7 +189,7 @@ be measuring row-*count* similarity and nobody would notice.
 
 ```
 $ uv run pytest tests/ -q
-18 passed
+21 passed
 ```
 
 Measured on the one gradeable table:
@@ -213,16 +213,45 @@ One gradeable table is thin evidence, and it is the strongest caveat on this
 project — the second matched table shared only 3 numbers with its source, below
 the threshold where pairwise agreement means anything.
 
+## The fix, measured: detect, then crop, then transcribe (optional passes)
+
+Two optional stages close the loop the baseline diagnosis opened, at one cheap
+hosted call per page/box, with the whole-page baseline untouched:
+
+**Detection** (`eval/detection.py`) — NVIDIA's hosted
+`nemoretriever-page-elements-v2` detector finds **4/4 table-bearing pages with
+zero confident false positives** (true tables 0.858–0.941 confidence; the one
+false positive, a tabular-looking UI screenshot, at 0.118) vs the VLM's 1/19.
+It also *corrected the eval's own reference mapping*: where the detector and
+the LaTeX-match-derived page list disagreed, the detector was right every time.
+
+**Crop-then-transcribe** (`eval/crop_transcribe.py`) — each detected box is
+cropped and sent to the *same VLM* as a dedicated table read, scored against
+the same LaTeX ground truth:
+
+| | whole page | crops |
+|---|---|---|
+| mean recall (all 8 tables) | 0.264 | **0.707** |
+| tables at ≥0.9 recall | 1 | **4** |
+| coverage at match thresholds | 2/8 | **6/8** |
+
+Same model, same pages: the limiting factor was never transcription ability
+but attention allocation on a full page. The residual misses sit exactly where
+the detector drew 2 boxes for 3 tables on one page.
+
 ## Layout
 
 ```
 src/mm_rag/
-  nvidia.py           NIM client: chat (incl. vision), embeddings, reranking
-  extract/pages.py    render, structured page read, prose fallback, verification
+  nvidia.py            NIM client: chat (incl. vision), embeddings, reranking
+  extract/pages.py     render, structured page read, prose fallback, verification
 eval/
-  table_accuracy.py   LaTeX-source ground truth, recall/precision per table
+  table_accuracy.py    LaTeX-source ground truth, recall/precision per table
+  structure.py         alignment-free structure metric
+  detection.py         optional: hosted page-element detection pass
+  crop_transcribe.py   optional: dedicated VLM reads of detected table crops
 scripts/
-  ingest.py           PDF -> elements -> embedded index
+  ingest.py            PDF -> elements -> embedded index
 ```
 
 ## Relationship to the sibling projects
