@@ -16,11 +16,10 @@ bounding boxes with confidences. Like the reranker, it never appears in
 `/v1/models` -- absence from the catalog list does not mean absence from the
 service.
 
-Reference truth: the pages holding the 8 `tabular` environments from the
-paper's LaTeX source, located via each table's best-overlap element in
-`table_accuracy.py`. That mapping is exact for strong matches and approximate
-for the weak ones, so per-page disagreements are reported for manual
-inspection rather than silently scored.
+Reference truth: the pages holding the seven rendered tables, recorded in
+`eval/ground_truth/2005.11401.json` after inspecting table captions and pages.
+An earlier evaluator incorrectly counted an unreferenced eighth `tabular`
+environment that exists in the source archive but not in the compiled PDF.
 """
 
 from __future__ import annotations
@@ -83,21 +82,28 @@ def main() -> int:
     for page_no, png in render_pages(args.pdf):
         data = detect(png, api_key)
         raw = data["data"][0].get("bounding_boxes") or {}
-        boxes = {cls: [b for b in items if b.get("confidence", 0.0) >= MIN_CONF]
-                 for cls, items in raw.items()}
-        counts = {cls: len(items) for cls, items in boxes.items() if items}
+        boxes = {cls: items for cls, items in raw.items() if items}
+        counts = {cls: len(items) for cls, items in boxes.items()}
         confs = {cls: [round(b.get("confidence", 0.0), 3) for b in items]
-                 for cls, items in boxes.items() if items}
+                 for cls, items in boxes.items()}
+        confident_boxes = {
+            cls: [b for b in items if b.get("confidence", 0.0) >= MIN_CONF]
+            for cls, items in boxes.items()
+        }
+        confident_counts = {cls: len(items) for cls, items in confident_boxes.items()
+                            if items}
         rows.append({"page": page_no, "counts": counts, "confidences": confs,
-                     "boxes": boxes})
-        print(f"page {page_no:>2}: {counts or '(nothing)'}")
+                     "boxes": boxes, "confident_counts": confident_counts,
+                     "confident_boxes": confident_boxes})
+        print(f"page {page_no:>2}: {confident_counts or '(nothing)'}")
 
-    detected = {r["page"] for r in rows if r["counts"].get("table")}
+    raw_detected = {r["page"] for r in rows if r["counts"].get("table")}
+    detected = {r["page"] for r in rows if r["confident_counts"].get("table")}
     tp = sorted(detected & TABLE_PAGES)
     fn = sorted(TABLE_PAGES - detected)
     fp = sorted(detected - TABLE_PAGES)
 
-    print(f"\ntable pages (from LaTeX-source matching): {sorted(TABLE_PAGES)}")
+    print(f"\nverified table pages:                     {sorted(TABLE_PAGES)}")
     print(f"detector found tables on:                 {sorted(detected)}")
     print(f"  hits {tp}   missed {fn}   extra {fp}")
     print(f"page-level recall    {len(tp)}/{len(TABLE_PAGES)}")
@@ -106,10 +112,13 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
         "detector": "nemoretriever-page-elements-v2",
+        "confidence_threshold": MIN_CONF,
         "table_pages_reference": sorted(TABLE_PAGES),
         "detected_table_pages": sorted(detected),
+        "raw_detected_table_pages": sorted(raw_detected),
         "page_recall": f"{len(tp)}/{len(TABLE_PAGES)}",
         "false_positive_pages": fp,
+        "low_confidence_extra_pages": sorted(raw_detected - detected),
         "per_page": rows,
     }, indent=2))
     print(f"\nwrote {args.out}")

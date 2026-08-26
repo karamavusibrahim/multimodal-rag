@@ -5,8 +5,8 @@ parser in a RAG pipeline, reading tables and charts off rendered PDF pages that
 the text layer cannot represent?
 
 **Answer.** Only partly, and the limiting factor is not the one that was
-expected. Detection is where the pipeline loses almost everything: 8 tables in
-the source paper, 2 recovered, 1 typed as a table. When the model does produce a
+expected. Detection is where the pipeline loses almost everything: 7 rendered
+tables in the source paper, 2 recovered, 1 typed as a table. When the model does produce a
 grid, the grid contains no invented numbers (precision over the grid region is
 1.000 on both matched tables) — but "recovered" spans a real range, from one
 character-perfect read to one partial read that kept 3 of 9 numbers.
@@ -84,19 +84,47 @@ limitation of the whole evaluation (§5).
 ### 2.1 Content
 
 ```
-source tables in LaTeX:      8
+source tables rendered:      7
 tables extracted as tables:  1
-matched tables:              2/8   (coverage 25%)
+matched tables:              2/7   (coverage 28.6%)
 mean recall                  0.667
 mean precision               0.817   (whole element, incl. surrounding prose)
 grid precision               1.000   (grid region only, both matched tables)
 ```
 
-Per-table recall, sorted — all 8 values:
+Per-table recall, sorted — all 7 values:
 
 ```
-1.000   0.333   |   0.200   0.200   0.130   0.111   0.085   0.049
+1.000   0.333   |   0.043   0.034   0.000   0.000   0.000
 ```
+
+> **Stale relative to the current harness.** Every recall on this page was
+> computed before two further ground-truth fixes landed in
+> `eval/table_accuracy.py`: `\multirow{2}{0.12\linewidth}` was leaking the
+> column *width* `0.12` into the gold numbers (only one of its three argument
+> groups was stripped), and hyphenated identifiers such as `T5-11B` and
+> `FEVER-3-way` were contributing `11` and `3`. Both are names and layout, not
+> data. Recomputing needs the arXiv LaTeX source, which this repository does
+> not commit — so the numbers below stand as last measured, with the caveat
+> attached rather than quietly restated. The direction of the correction is
+> *not* predictable: the same tokens were counted on both the gold and the
+> transcription side, so removing them shrinks the numerator and the
+> denominator together.
+>
+> Committing the source archive (or its checksum plus the parsed gold numbers)
+> is the fix, and is the single highest-value change left in this repo.
+
+Two corrections separate this list from the `1.000 0.333 | 0.200 0.200 0.130
+0.111 0.085 0.049` printed in an earlier revision. First, number matching is
+now constrained to the page the table actually renders on, so digits that
+coincidentally appeared in prose elsewhere in the paper no longer count — which
+is what the long tail was, and three of those entries collapse to exactly zero
+once the constraint is applied. Second, `tables/main_results.tex` was dropped:
+it exists in the arXiv archive but is never `\input` by the root document, so
+it does not render in the PDF and was never a legitimate target.
+
+The bimodal reading survives both corrections and is in fact sharper — with
+page-constrained matching there is no gradual tail to explain away.
 
 An earlier version of this report printed only 6 of these values and called the
 distribution "bimodal, with nothing in the middle". That was a curated list: the
@@ -212,8 +240,8 @@ states the weaker claim the data supports.
 
 **6. The structure ground truth was parsed from a different cleaning of the
 LaTeX than the content ground truth.** `\multicolumn{2}{c}{...}` kept its span
-count "2" as cell content in the structure grid (six of the eight source tables
-were affected), and a body-row multicolumn shifted every later column index.
+count "2" as cell content in the structure grid (six of the eight tables then
+under consideration were affected), and a body-row multicolumn shifted every later column index.
 Unaffected on published numbers only because table 1 contains no multicolumn.
 Fixed by expanding multicolumn spans into the correct number of cells; also
 fixed: `\\[2pt]` row-spacing leakage and `\begin{tabular}[t]{...}` placement
@@ -266,7 +294,7 @@ wall-clock deadline per item, not just a socket timeout.
 - **Structure is measured on one table.** The metric is tested; n=1 gradeable is
   an existence proof that lossless extraction happens, not evidence about how
   often it happens.
-- **One paper, 8 tables.** Enough to establish the bimodal shape and to rule out
+- **One paper, 7 rendered tables.** Enough to establish the bimodal shape and to rule out
   lossy transcription as the cause. Not enough for a stable coverage percentage.
 - **Numeric cells only.** Row labels and column headers are unscored by both
   metrics. A table with the right numbers under the wrong headers scores
@@ -332,18 +360,16 @@ dedicated table transcription, scored against the same LaTeX ground truth:
 | table | whole-page recall | crop recall |
 |---|---|---|
 | 1 | 1.000 | 1.000 |
-| 2 | 0.111 | **0.926** |
-| 3 | 0.130 | **1.000** |
-| 4 | 0.333 | 0.333 |
-| 5 | 0.200 | **1.000** |
-| 6 | 0.200 | 0.300 |
-| 7 | 0.085 | **0.898** |
-| 8 | 0.049 | 0.195 |
-| **mean** | **0.264** | **0.707** |
+| 2 | 0.043 | **1.000** |
+| 3 | 0.333 | 0.333 |
+| 4 | 0.000 | **1.000** |
+| 5 | 0.000 | 0.100 |
+| 6 | 0.034 | **0.898** |
+| 7 | 1.000 | 1.000 |
+| **mean** | **0.202** | **0.751** |
 
-Coverage at the baseline's own match thresholds (≥3 overlap, ≥20% recall):
-**2/8 → 6/8.** Cost: one VLM call per detected box — six calls for the whole
-paper.
+Tables with at least one correctly transcribed number: **4/7 → 7/7.** Cost: one
+VLM call per detected box — six calls for the whole paper.
 
 The same model that read 1 table off whole pages reads 4 tables at ≥0.9 recall
 when handed crops: the limiting factor was never transcription ability, it was
@@ -361,11 +387,58 @@ Remaining experiments, in order of leverage:
    citation is viable (§5), and the only one of these that requires new
    ground-truth parsing rather than new calls.
 
+### 6.2 Optional: visual page retrieval — the blocked direction, unblocked
+
+The July research pass identified ColPali-class visual document embeddings as
+the best published direction for table retrieval, and recorded it as blocked:
+no such model was hosted-callable. That changed —
+`nvidia/llama-nemotron-embed-vl-1b-v2` is now on the catalog and accepts page
+images as data URLs through the standard `/embeddings` endpoint, putting text
+queries and page pixels in one 2048-d space (the unification the June–August
+2026 literature converged on; cf. UEmbed, arXiv 2608.02583).
+
+`eval/visual_retrieval.py` (2026-08-08, optional — reads existing artifacts,
+writes only its own results file) embeds all 19 rendered pages once, builds a
+table-finding query per ground-truth table from the LaTeX source's own
+row/column labels (never from the rendered pages), and ranks pages by cosine.
+Comparison arm: the existing parse-then-embed pipeline, scoring each page by
+its best element. Page-level gold is the best-crop page per table from §6.1;
+the three tables whose best crop recall was < 0.5 are flagged `weak_gold`.
+
+| page-finding, 7 tables / 19 pages | R@1 | R@3 | MRR |
+|---|---|---|---|
+| visual page embeddings | **0.857** | **1.000** | **0.929** |
+| parse-then-embed (baseline pipeline) | 0.286 | 0.429 | 0.383–0.411 |
+
+**The visual embedding puts the correct page at rank 1 for six of seven tables
+and within the top three for all of them — including the ones whose content the
+VLM pipeline never managed to transcribe.**
+
+An earlier revision of this table reported `1.000 / 1.000 / 1.000` for the
+visual arm over "8 tables". That eighth entry was
+`tables/main_results.tex`, unreferenced by the root document and absent from
+the rendered PDF; it should never have been scored, and removing it costs the
+visual arm its perfect R@1. The retracted row is preserved in
+`eval/results/visual_retrieval.json` under `retracted_unrendered_source_table`.
+The text arm's MRR is reported as an interval because the committed artifact
+stores only the top-3 — enough to fix R@1 and R@3 exactly, not enough to place
+one table whose rank is known only to exceed 3, and the query vectors were not
+committed.
+The text arm fails for the reason §2.3 already established: elements that were
+never extracted cannot be retrieved, so parse-then-embed inherits the
+detection loss. Visual retrieval sidesteps parsing entirely — the pages the
+transcription pipeline is blind to are exactly the ones it still finds.
+
+Caveats stated plainly: one document, eight queries, and label-derived
+queries are the friendly case for lexical-on-pixels matching (a paraphrased
+user question would be harder). This is a capability unlock demonstrated,
+not a benchmark; the next step is paraphrased queries and a second document.
+
 ## 7. Conclusion
 
 The pipeline works as a transcriber and fails as a detector — and the fix is
 now measured, not merely indicated. Against LaTeX ground truth the
-single-prompt VLM pass recovers 25% of the paper's tables and types 1 of 19
+single-prompt VLM pass recovers 28.6% of the paper's rendered tables (2/7) and types 1 of 19
 pages as containing one; a dedicated hosted detector finds **all four**
 table-bearing pages with zero confident false positives, for one cheap CV call
 per page. Of what the VLM transcribes, it invents nothing (grid precision

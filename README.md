@@ -115,23 +115,26 @@ uv run python eval/table_accuracy.py --arxiv-id 2005.11401
 Measured on the full 19-page RAG paper (Lewis et al., 2020):
 
 ```
-source tables in LaTeX:      8
-matched tables:              2/8   (coverage 25%)
-mean recall                  0.667
+source tables rendered:      7
+matched tables:              2/7   (coverage 28.6%)
+mean recall                  0.667   (over the 2 matched)
 mean precision               0.817   (whole element, incl. surrounding prose)
 grid precision               1.000   (grid region only, both matched tables)
 ```
 
-**Coverage is the failure, not fidelity.** The per-table recalls, all 8:
+**Coverage is the failure, not fidelity.** The per-table recalls, all 7:
 
 ```
-1.000  0.333  |  0.200  0.200  0.130  0.111  0.085  0.049
+1.000  0.333  |  0.043  0.034  0.000  0.000  0.000
 ```
 
 No table cleared 0.35 except the one read essentially perfectly; the tail is
 coincidental digit overlap with prose paragraphs, not degraded reads. (An
-earlier version of this list omitted the two 0.200s and claimed a clean bimodal
-split — see REPORT §3.) That still points at *page-level table detection* as
+earlier version of this list read `1.000 0.333 | 0.200 0.200 0.130 0.111 0.085
+0.049` across 8 tables. Two corrections since — matching is now constrained to
+the page the table actually appears on, which removes the coincidental
+cross-page overlaps and collapses three of those tails to exactly zero; and the
+8th "table" was retracted, see below. See REPORT §3.) That still points at *page-level table detection* as
 the thing to fix, and rules out "the OCR is a bit lossy", which would have
 produced a spread around 0.5 and a completely different remedy. Inside any grid
 the model actually produced, it invented no numbers: grid-region precision is
@@ -231,13 +234,48 @@ the same LaTeX ground truth:
 
 | | whole page | crops |
 |---|---|---|
-| mean recall (all 8 tables) | 0.264 | **0.707** |
+| mean recall (all 7 tables) | 0.202 | **0.751** |
 | tables at ≥0.9 recall | 1 | **4** |
-| coverage at match thresholds | 2/8 | **6/8** |
+| tables with any correct number | 4/7 | **7/7** |
 
 Same model, same pages: the limiting factor was never transcription ability
 but attention allocation on a full page. The residual misses sit exactly where
 the detector drew 2 boxes for 3 tables on one page.
+
+**Visual page retrieval** (`eval/visual_retrieval.py`, optional) — the
+ColPali-class direction the July research pass recorded as *blocked by the
+hosted-only constraint* is now unblocked:
+`nvidia/llama-nemotron-embed-vl-1b-v2` accepts page images as data URLs on the
+standard `/embeddings` endpoint. Embedding the 19 page images and querying with
+each table's LaTeX-derived labels:
+
+| | R@1 | R@3 | MRR |
+|---|---|---|---|
+| visual (page images) | **0.857** (6/7) | **1.000** | **0.929** |
+| text (parse-then-embed) | 0.286 (2/7) | 0.429 | 0.383–0.411 |
+
+The pages the transcription pipeline is blind to are exactly the ones visual
+retrieval still finds, because it never depends on extraction succeeding. The
+one visual miss is found by rank 3, so every table is reachable in a top-3
+window.
+
+Two honesty notes on this table. The text MRR is a *bound*, not a point: the
+committed artifact keeps the top-3 only, which fixes R@1 and R@3 exactly but
+leaves one table's true rank known only to be >3, and the query vectors were
+not committed so it cannot be recomputed offline. And an earlier version of
+this section claimed **rank 1 for all 8 tables (MRR 1.000)** — that number
+included `tables/main_results.tex`, which is present in the arXiv source
+archive but never `\input` by the root document and therefore does not appear
+in the rendered PDF. It was not a retrieval target at all; scoring a page hit
+against a table the reader cannot see inflated both metrics. Retracted, with
+the original entry preserved in the artifact under
+`retracted_unrendered_source_table`.
+
+One document and label-derived queries, so a demonstrated unlock rather than a
+benchmark. For calibration, the published leaderboard for this class of model
+is ViDoRe (V1+V2, NDCG@5), where late-interaction systems currently sit in the
+mid-80s — this repo measures a different thing on 7 tables from one paper and
+should not be read against those numbers. Details and caveats in REPORT §6.2.
 
 ## Layout
 
@@ -267,17 +305,27 @@ agentic reasoning over it → perception as the input to both.
 
 ## Limitations
 
-- **Table detection is the bottleneck: 25% coverage, 1 of 19 pages typed as a
-  table.** Measured, not asserted — see above. Fidelity when a table *is* found
-  is fine (recall 0.667); finding it is not.
-- **Structure is measured on one table.** The metric is tested (21 unit tests
-  pin its invariances), but n=1 gradeable is an existence proof that lossless
-  extraction happens, not evidence about how often.
-- Single paper, 8 tables. Enough to establish the bimodal shape and rule out
-  lossy-OCR, not enough for a stable coverage percentage.
+- **Table detection is the bottleneck: 28.6% coverage (2/7), 1 of 19 pages
+  typed as a table.** Measured, not asserted — see above. Fidelity when a table
+  *is* found is fine (recall 0.667 over the matched two); finding it is not.
+- **Structure is measured on one table.** The metric is tested (29 unit tests
+  pin its invariances and the page-parsing normalisation), but n=1 gradeable is
+  an existence proof that lossless extraction happens, not evidence about how
+  often.
+- Single paper, 7 rendered tables. Enough to establish the bimodal shape and
+  rule out lossy-OCR, not enough for a stable coverage percentage. Every
+  percentage on this page has a denominator of 7 or 19 — treat them as
+  illustrations of a mechanism, not as rates.
 - Structure scoring only grades numeric cells. Row labels and column headers —
   the text that makes a cell *interpretable* — are matched by neither metric.
-- One page in eight still needs the prose fallback, losing table/chart typing.
+- Pages that come back unstructured still need the prose fallback, losing
+  table/chart typing.
+- **There is no end-to-end query path in the library.** `src/mm_rag/` ships
+  rendering, page extraction and the NIM client; `retrieve/` is an empty
+  package and there is no `ask()`. Retrieval is measured in `eval/`, not
+  served. What this repo is, precisely: an instrumented perception-and-
+  retrieval *measurement harness* for visually-rich pages. Cloning it lets you
+  reproduce the numbers above; it does not let you ask a question yet.
 - Chart data transcription is unverified — the model reads labelled values, but
   nothing checks them against the underlying figure.
 - Cost scales linearly with pages: one vision call each, no caching across runs.

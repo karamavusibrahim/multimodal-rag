@@ -1,43 +1,37 @@
 {
   "arxiv_id": "2005.11401",
   "model": "nvidia/nemotron-nano-12b-v2-vl",
+  "source_tables": 7,
   "n_transcripts": 6,
+  "box_min_confidence": 0.0,
   "per_table": [
     {
       "table": 1,
-      "n_numbers": 26,
-      "recall": 1.0,
-      "precision": 1.0,
-      "overlap": 26,
-      "page": 19,
-      "box": 0,
-      "baseline_recall": 1.0,
-      "baseline_kind": "text"
-    },
-    {
-      "table": 2,
+      "gold_page": 6,
       "n_numbers": 27,
       "recall": 0.9259259259259259,
       "precision": 0.3968253968253968,
       "overlap": 25,
       "page": 6,
       "box": 0,
-      "baseline_recall": 0.1111111111111111,
-      "baseline_kind": "text"
+      "baseline_recall": 0.0,
+      "baseline_kind": null
     },
     {
-      "table": 3,
+      "table": 2,
+      "gold_page": 6,
       "n_numbers": 23,
       "recall": 1.0,
       "precision": 0.36507936507936506,
       "overlap": 23,
       "page": 6,
       "box": 0,
-      "baseline_recall": 0.13043478260869565,
+      "baseline_recall": 0.043478260869565216,
       "baseline_kind": "text"
     },
     {
-      "table": 4,
+      "table": 3,
+      "gold_page": 7,
       "n_numbers": 9,
       "recall": 0.3333333333333333,
       "precision": 0.3333333333333333,
@@ -48,47 +42,51 @@
       "baseline_kind": "table"
     },
     {
-      "table": 5,
+      "table": 4,
+      "gold_page": 8,
       "n_numbers": 10,
       "recall": 1.0,
       "precision": 1.0,
       "overlap": 10,
       "page": 8,
       "box": 1,
-      "baseline_recall": 0.2,
-      "baseline_kind": "text"
+      "baseline_recall": 0.0,
+      "baseline_kind": null
+    },
+    {
+      "table": 5,
+      "gold_page": 8,
+      "n_numbers": 10,
+      "recall": 0.1,
+      "precision": 0.018867924528301886,
+      "overlap": 1,
+      "page": 8,
+      "box": 0,
+      "baseline_recall": 0.0,
+      "baseline_kind": null
     },
     {
       "table": 6,
-      "n_numbers": 10,
-      "recall": 0.3,
-      "precision": 0.047619047619047616,
-      "overlap": 3,
-      "page": 6,
-      "box": 0,
-      "baseline_recall": 0.2,
-      "baseline_kind": "text"
-    },
-    {
-      "table": 7,
+      "gold_page": 8,
       "n_numbers": 59,
       "recall": 0.8983050847457628,
       "precision": 1.0,
       "overlap": 53,
       "page": 8,
       "box": 0,
-      "baseline_recall": 0.0847457627118644,
+      "baseline_recall": 0.03389830508474576,
       "baseline_kind": "text"
     },
     {
-      "table": 8,
-      "n_numbers": 41,
-      "recall": 0.1951219512195122,
-      "precision": 0.12698412698412698,
-      "overlap": 8,
-      "page": 6,
+      "table": 7,
+      "gold_page": 19,
+      "n_numbers": 26,
+      "recall": 1.0,
+      "precision": 1.0,
+      "overlap": 26,
+      "page": 19,
       "box": 0,
-      "baseline_recall": 0.04878048780487805,
+      "baseline_recall": 1.0,
       "baseline_kind": "text"
     }
   ],

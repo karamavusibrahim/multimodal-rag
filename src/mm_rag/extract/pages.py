@@ -147,12 +147,26 @@ def extract_page(png: bytes, *, model: str = VLM_MODEL) -> list[dict[str, str]]:
 
     # Models return either {"elements": [...]} as asked, or a bare [...] list.
     # Both are unambiguous, so accept both rather than discarding good output.
+    #
+    # The string case is not cosmetic. A model that answers {"content": "The
+    # page describes..."} puts a *str* here, and a str is iterable: the loop
+    # below then walks it one character at a time and emits a separate
+    # single-character "text" element for every non-space character on the
+    # page. That silently shreds the page into hundreds of useless chunks
+    # instead of failing, so it has to be normalised before iteration, not
+    # caught inside the loop.
     if isinstance(data, list):
-        items = data
+        items: list[Any] = data
     elif isinstance(data, dict):
-        items = data.get("elements") or data.get("content") or []
-        if isinstance(items, dict):
-            items = [items]
+        raw_items = data.get("elements") or data.get("content") or []
+        if isinstance(raw_items, (dict, str)):
+            items = [raw_items]
+        elif isinstance(raw_items, list):
+            items = raw_items
+        else:
+            items = []
+    elif isinstance(data, str):
+        items = [data]
     else:
         items = []
 

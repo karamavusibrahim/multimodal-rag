@@ -1,0 +1,105 @@
+{
+  "arxiv_id": "2005.11401",
+  "vl_model": "nvidia/llama-nemotron-embed-vl-1b-v2",
+  "text_model": "nvidia/nemotron-3-embed-1b",
+  "n_tables": 7,
+  "n_pages": 19,
+  "gold_provenance": "eval/ground_truth/2005.11401.json; manually checked against rendered table captions and pages",
+  "query_provenance": "first 12 distinct alphabetic tokens from each referenced LaTeX table body; may include headers, labels, cell text, and citation-key fragments",
+  "all_tables": {
+    "visual": {
+      "recall@1": 0.857,
+      "recall@3": 1.0,
+      "mrr": 0.929
+    },
+    "text": {
+      "recall@1": 0.286,
+      "recall@3": 0.429,
+      "mrr": null,
+      "mrr_lower_bound": 0.383,
+      "mrr_upper_bound": 0.411,
+      "note": "The saved top-3 is enough for exact R@1/R@3, but the corrected rank of table 5 is only known to be greater than 3; query vectors were not committed, so exact MRR cannot be reconstructed offline."
+    }
+  },
+  "per_table": [
+    {
+      "table": 1,
+      "gold_page": 6,
+      "query": "table reporting Model, TQA, Closed, Book, roberts, cqba, SSM, Open, REALM, guu, DPR, Karpukhin",
+      "visual_rank": 1,
+      "text_rank": 12,
+      "visual_top3": [6, 19, 18],
+      "text_top3": [5, 19, 12]
+    },
+    {
+      "table": 2,
+      "gold_page": 6,
+      "query": "table reporting Model, Jeopardy, MSMARCO, FVR, QB-, R-L, Label, Acc, SotA, BART, RAG-Tok, RAG-Seq",
+      "visual_rank": 1,
+      "text_rank": 1,
+      "visual_top3": [6, 8, 5],
+      "text_top3": [6, 17, 7]
+    },
+    {
+      "table": 3,
+      "gold_page": 7,
+      "query": "table reporting Task, Input, Model, Generation, MS-MARCO, define, middle, ear, BART, The, part, between",
+      "visual_rank": 1,
+      "text_rank": 1,
+      "visual_top3": [7, 6, 5],
+      "text_top3": [7, 13, 10]
+    },
+    {
+      "table": 4,
+      "gold_page": 8,
+      "query": "table reporting Factuality, Specificity, BART, better, RAG, Both, good, poor, majority",
+      "visual_rank": 1,
+      "text_rank": 10,
+      "visual_top3": [8, 6, 5],
+      "text_top3": [6, 7, 5]
+    },
+    {
+      "table": 5,
+      "gold_page": 8,
+      "query": "table reporting MSMARCO, Jeopardy, QGen, Gold, BART, RAG-Token, RAG-Seq",
+      "visual_rank": 2,
+      "text_rank": null,
+      "text_rank_lower_bound": 4,
+      "visual_top3": [6, 8, 5],
+      "text_top3": [6, 17, 7]
+    },
+    {
+      "table": 6,
+      "gold_page": 8,
+      "query": "table reporting Model, TQA, Jeopardy-QGen, MSMarco, FVR-, Exact, Match, QB-, R-L, Label, Accuracy, RAG-Sequence-BM",
+      "visual_rank": 1,
+      "text_rank": 9,
+      "visual_top3": [8, 6, 5],
+      "text_top3": [17, 6, 7]
+    },
+    {
+      "table": 7,
+      "gold_page": 19,
+      "query": "table reporting Task, Train, Development, Test, Natural, Questions, TriviaQA, WebQuestions, CuratedTrec, Jeopardy, Question, Generation",
+      "visual_rank": 1,
+      "text_rank": 3,
+      "visual_top3": [19, 5, 18],
+      "text_top3": [5, 18, 19]
+    }
+  ],
+  "audit_corrections": [
+    "The original artifact counted an unreferenced TeX table that is not rendered in the PDF; that row is retained below but excluded from metrics.",
+    "The original page label for rendered table 5 came from weak cross-page crop overlap and pointed to page 6; manual PDF inspection places it on page 8, changing its visual rank from 1 to 2.",
+    "The corrected text rank for table 5 cannot be recovered exactly from the committed top-3, so text MRR is reported only as a bound."
+  ],
+  "retracted_unrendered_source_table": {
+    "old_table": 8,
+    "old_gold_page": 6,
+    "reason": "tables/main_results.tex is present in the arXiv archive but is not input by the root document and is not rendered in the PDF",
+    "query": "table reporting Model, TQA, WebQ, CTrec, OS-QGen, MARCO, LAMBADA, FEVER, Metrics, Acc, Q-BLEU-, R-L",
+    "visual_rank": 1,
+    "text_rank": 7,
+    "visual_top3": [6, 8, 18],
+    "text_top3": [17, 5, 10]
+  }
+}

@@ -10,8 +10,8 @@ then scored against the same LaTeX ground truth as the baseline
 (`table_accuracy.py`), so the two pipelines are directly comparable per table.
 
 Optional by design -- the whole-page baseline in `table_accuracy.py` is
-untouched, and this costs one extra VLM call per detected table box (~5 for
-this paper).
+untouched, and this costs one extra VLM call per selected table box (five at
+the detector's 0.5 confidence threshold for this paper).
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ from mm_rag.nvidia import chat  # noqa: E402
 from table_accuracy import (  # noqa: E402
     extract_source_tables,
     fetch_source,
+    load_page_ground_truth,
     numbers_in,
     score,
 )
@@ -68,45 +69,60 @@ def main() -> int:
     ap.add_argument("--pdf", type=Path, default=Path("data/raw/2005.11401.pdf"))
     ap.add_argument("--detection", type=Path,
                     default=Path("eval/results/detection.json"))
+    ap.add_argument("--min-confidence", type=float, default=0.5)
+    ap.add_argument("--reuse-results", type=Path,
+                    help="rescore saved transcripts without making API calls")
     ap.add_argument("--out", type=Path,
                     default=Path("eval/results/crop_transcribe.json"))
     args = ap.parse_args()
 
-    det = json.loads(args.detection.read_text())
-    boxes_by_page: dict[int, list[dict[str, float]]] = {}
-    for row in det["per_page"]:
-        tables = (row.get("boxes") or {}).get("table") or []
-        if tables:
-            boxes_by_page[row["page"]] = tables
-
     blob = fetch_source(args.arxiv_id, Path("data/raw") / f"{args.arxiv_id}.tar.gz")
     source_tables = extract_source_tables(blob)
+    gold_pages = load_page_ground_truth(args.arxiv_id)
     baseline = {r["table"]: r for r in json.loads(
         Path("eval/results/table_accuracy.json").read_text())["per_table"]}
 
-    transcripts: list[dict[str, Any]] = []
-    for page_no, png in render_pages(args.pdf):
-        for i, box in enumerate(boxes_by_page.get(page_no, [])):
-            print(f"transcribing page {page_no} box {i} "
-                  f"(conf {box.get('confidence', 0):.3f}) ...")
-            text = chat(VLM_MODEL, _vision_message(crop(png, box), CROP_PROMPT),
-                        max_tokens=1500, temperature=0.0)
-            transcripts.append({"page": page_no, "box": i,
-                                "confidence": box.get("confidence"),
-                                "text": text})
+    if args.reuse_results:
+        saved = json.loads(args.reuse_results.read_text())
+        transcripts = saved["transcripts"]
+        box_min_confidence = saved.get("box_min_confidence", 0.0)
+    else:
+        det = json.loads(args.detection.read_text())
+        boxes_by_page: dict[int, list[dict[str, float]]] = {}
+        for row in det["per_page"]:
+            tables = (row.get("boxes") or {}).get("table") or []
+            selected = [b for b in tables
+                        if b.get("confidence", 0.0) >= args.min_confidence]
+            if selected:
+                boxes_by_page[row["page"]] = selected
+
+        transcripts: list[dict[str, Any]] = []
+        for page_no, png in render_pages(args.pdf):
+            for i, box in enumerate(boxes_by_page.get(page_no, [])):
+                print(f"transcribing page {page_no} box {i} "
+                      f"(conf {box.get('confidence', 0):.3f}) ...")
+                text = chat(VLM_MODEL, _vision_message(crop(png, box), CROP_PROMPT),
+                            max_tokens=1500, temperature=0.0)
+                transcripts.append({"page": page_no, "box": i,
+                                    "confidence": box.get("confidence"),
+                                    "text": text})
+        box_min_confidence = args.min_confidence
 
     # Score exactly like the baseline: each source table matched to its
     # best-overlapping transcript, same thresholds implied by reporting both.
     rows = []
     for st in source_tables:
         best = {"recall": 0.0, "precision": 0.0, "overlap": 0, "page": None}
-        for t in transcripts:
+        eligible = [t for t in transcripts
+                    if not gold_pages or t["page"] == gold_pages.get(st.index)]
+        for t in eligible:
             r, p, o = score(st.numbers, numbers_in(t["text"]))
             if o > best["overlap"]:
                 best = {"recall": r, "precision": p, "overlap": o,
                         "page": t["page"], "box": t["box"]}
         base = baseline.get(st.index, {})
-        rows.append({"table": st.index, "n_numbers": len(st.numbers), **best,
+        rows.append({"table": st.index, "gold_page": gold_pages.get(st.index),
+                     "n_numbers": len(st.numbers), **best,
                      "baseline_recall": base.get("recall"),
                      "baseline_kind": base.get("kind")})
 
@@ -120,7 +136,9 @@ def main() -> int:
     args.out.write_text(json.dumps({
         "arxiv_id": args.arxiv_id,
         "model": VLM_MODEL,
+        "source_tables": len(source_tables),
         "n_transcripts": len(transcripts),
+        "box_min_confidence": box_min_confidence,
         "per_table": rows,
         "transcripts": transcripts,
     }, indent=2))

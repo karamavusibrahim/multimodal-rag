@@ -1,0 +1,14 @@
+{
+  "arxiv_id": "2005.11401",
+  "pdf_pages": 19,
+  "provenance": "Table captions and page numbers manually checked against the rendered PDF; source-table order follows the root TeX document and its referenced inputs.",
+  "tables": [
+    {"table": 1, "page": 6, "caption": "Open-Domain QA Test Scores"},
+    {"table": 2, "page": 6, "caption": "Generation and classification Test Scores"},
+    {"table": 3, "page": 7, "caption": "Examples from generation tasks"},
+    {"table": 4, "page": 8, "caption": "Human assessments for the Jeopardy Question Generation Task"},
+    {"table": 5, "page": 8, "caption": "Ratio of distinct to total tri-grams for generation tasks"},
+    {"table": 6, "page": 8, "caption": "Ablations on the dev set"},
+    {"table": 7, "page": 19, "caption": "Number of instances in the datasets used"}
+  ]
+}

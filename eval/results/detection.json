@@ -1,5 +1,6 @@
 {
   "detector": "nemoretriever-page-elements-v2",
+  "confidence_threshold": 0.5,
   "table_pages_reference": [
     6,
     7,
@@ -10,11 +11,18 @@
     6,
     7,
     8,
+    19
+  ],
+  "raw_detected_table_pages": [
+    6,
+    7,
+    8,
     17,
     19
   ],
   "page_recall": "4/4",
-  "false_positive_pages": [
+  "false_positive_pages": [],
+  "low_confidence_extra_pages": [
     17
   ],
   "per_page": [

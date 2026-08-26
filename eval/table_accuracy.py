@@ -65,7 +65,16 @@ _TABULAR_RE = re.compile(
 # A "number" for our purposes: integers, decimals, percentages, with optional
 # sign. Deliberately excludes bare years-in-citations by requiring it not to be
 # immediately preceded by a citation command.
-_NUM_RE = re.compile(r"(?<![\w\\])-?\d+(?:\.\d+)?")
+# A number is table *data* only if it is not part of a name. The lookbehind
+# already excluded `T5` (digit glued to a letter), but not the hyphenated
+# forms these papers are full of: `T5-11B` yielded "11" and `FEVER-3-way`
+# yielded "3", both of which entered the ground truth as numbers the model was
+# then required to reproduce. That inflates the denominator and deflates recall
+# for reasons unrelated to reading the page -- the same class of bug as the
+# layout directives below, and it survived the fix for those.
+_NUM_RE = re.compile(
+    r"(?<![\w\\])(?<!\w-)-?\d+(?:\.\d+)?(?![\w-]*[A-Za-z])"
+)
 # LaTeX noise that would otherwise contribute spurious digits. The second
 # alternative matters more than it looks: \multicolumn{2}{c}{...} and
 # \cmidrule(lr){2-3} are *layout* directives, and their arguments were being
@@ -74,13 +83,20 @@ _NUM_RE = re.compile(r"(?<![\w\\])-?\d+(?:\.\d+)?")
 # to do with reading the page.
 _STRIP_RE = re.compile(
     r"\\(?:cite|ref|label|footnote|includegraphics)\s*(?:\[[^\]]*\])?\{[^}]*\}"
-    r"|\\(?:multicolumn|multirow)\s*\{[^}]*\}"
+    # \multirow takes THREE arguments -- {nrows}{width}{text} -- and only the
+    # third is content. Stripping one group left `{0.12\linewidth}` behind, so
+    # a *column width* was counted as a table number. \multicolumn is
+    # {ncols}{align}{text}; its {align} carries no digits, so one group is
+    # enough there, but being explicit is cheaper than rediscovering this.
+    r"|\\multirow\s*\{[^}]*\}\s*\{[^}]*\}"
+    r"|\\multicolumn\s*\{[^}]*\}\s*\{[^}]*\}"
     r"|\\(?:cmidrule|cline)\s*(?:\([^)]*\))?\s*\{[^}]*\}"
 )
 _MACRO_COMPUTED = re.compile(r"\\(pgfmathprintnumber|csname|the[a-z]+)")
 # Leading column spec, allowing one level of nesting for p{...}/m{...} widths,
 # and an optional [t]/[b] placement argument before it.
 _COLSPEC_RE = re.compile(r"^(?:\[[^\]]*\])?\{(?:[^{}]|\{[^{}]*\})*\}")
+_INPUT_RE = re.compile(r"\\(?:input|include)\s*\{([^}]+)\}")
 
 # Thresholds for calling a source table "found" in the extraction. Below these
 # an apparent match is coincidental digit overlap rather than the table.
@@ -108,17 +124,63 @@ def fetch_source(arxiv_id: str, cache: Path) -> bytes:
     return r.content
 
 
+def _without_comments(tex: str) -> str:
+    """Remove TeX comments while preserving escaped percent signs."""
+    return "\n".join(re.sub(r"(?<!\\)%.*$", "", line) for line in tex.splitlines())
+
+
 def tex_files(blob: bytes) -> Iterable[str]:
-    """arXiv e-print is usually a gzipped tar of sources; sometimes a bare .tex."""
+    """Yield compilable TeX documents, with their inputs expanded in order.
+
+    arXiv source archives often contain abandoned or generated ``.tex`` files
+    that are not part of the rendered PDF. Scanning every member silently turns
+    those files into ground truth. Prefer roots containing ``\\documentclass``
+    and recursively follow only ``\\input``/``\\include`` references. A bare
+    TeX file, or an archive with no identifiable root, retains the old fallback.
+    """
     try:
         with tarfile.open(fileobj=io.BytesIO(blob), mode="r:*") as tar:
+            files: dict[str, str] = {}
             for member in tar.getmembers():
                 if member.isfile() and member.name.lower().endswith(".tex"):
                     fh = tar.extractfile(member)
                     if fh:
-                        yield fh.read().decode("utf-8", "replace")
+                        files[member.name] = fh.read().decode("utf-8", "replace")
+
+            roots = [name for name, text in files.items()
+                     if r"\documentclass" in _without_comments(text)]
+            if not roots:
+                yield from files.values()
+                return
+
+            def expand(name: str, stack: tuple[str, ...] = ()) -> str:
+                if name in stack or name not in files:
+                    return ""
+                text = _without_comments(files[name])
+                parent = Path(name).parent
+
+                def replace(match: re.Match[str]) -> str:
+                    child = str(parent / match.group(1))
+                    if not child.lower().endswith(".tex"):
+                        child += ".tex"
+                    return expand(child, stack + (name,))
+
+                return _INPUT_RE.sub(replace, text)
+
+            for root in roots:
+                yield expand(root)
     except tarfile.ReadError:
         yield blob.decode("utf-8", "replace")
+
+
+def load_page_ground_truth(arxiv_id: str, path: Path | None = None) -> dict[int, int]:
+    """Load an optional, manually inspected source-table-to-PDF-page map."""
+    if path is None:
+        path = Path("eval/ground_truth") / f"{arxiv_id}.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text())
+    return {int(row["table"]): int(row["page"]) for row in data["tables"]}
 
 
 def normalize_number(tok: str) -> str:
@@ -187,6 +249,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--arxiv-id", default="2005.11401")
     ap.add_argument("--index", type=Path, default=Path("data/processed"))
+    ap.add_argument("--page-ground-truth", type=Path)
     ap.add_argument("--out", type=Path, default=Path("eval/results/table_accuracy.json"))
     args = ap.parse_args()
 
@@ -206,6 +269,7 @@ def main() -> int:
 
     blob = fetch_source(args.arxiv_id, Path("data/raw") / f"{args.arxiv_id}.tar.gz")
     source_tables = extract_source_tables(blob)
+    gold_pages = load_page_ground_truth(args.arxiv_id, args.page_ground_truth)
 
     print(f"source tables in LaTeX:      {len(source_tables)}")
     print(f"tables extracted from pages: {len(extracted_tables)}")
@@ -215,7 +279,9 @@ def main() -> int:
     for st in source_tables:
         best = {"recall": 0.0, "precision": 0.0, "overlap": 0, "element_id": None}
         best_el = None
-        for el in candidates:
+        eligible = [el for el in candidates
+                    if not gold_pages or el.get("page") == gold_pages.get(st.index)]
+        for el in eligible:
             r, p, o = score(st.numbers, numbers_in(el["content"]))
             if o > best["overlap"]:
                 best = {"recall": r, "precision": p, "overlap": o,
@@ -230,7 +296,8 @@ def main() -> int:
             if gnums is not None:
                 _, pg, _ = score(st.numbers, gnums)
                 best["precision_grid"] = pg
-        rows.append({"table": st.index, "n_numbers": len(st.numbers), **best})
+        rows.append({"table": st.index, "gold_page": gold_pages.get(st.index),
+                     "n_numbers": len(st.numbers), **best})
 
     # A single coincidental digit is not a match. Two tables in the first run
     # both "matched" the same element on overlap=1 of 81 and 57 numbers, which
@@ -321,6 +388,7 @@ def main() -> int:
         "arxiv_id": args.arxiv_id,
         "source_tables": len(source_tables),
         "extracted_tables": len(extracted_tables),
+        "page_ground_truth": bool(gold_pages),
         "coverage": coverage,
         "mean_recall_matched": mr,
         "mean_precision_matched": mp,
