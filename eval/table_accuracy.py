@@ -66,15 +66,22 @@ _TABULAR_RE = re.compile(
 # sign. Deliberately excludes bare years-in-citations by requiring it not to be
 # immediately preceded by a citation command.
 # A number is table *data* only if it is not part of a name. The lookbehind
-# already excluded `T5` (digit glued to a letter), but not the hyphenated
-# forms these papers are full of: `T5-11B` yielded "11" and `FEVER-3-way`
-# yielded "3", both of which entered the ground truth as numbers the model was
-# then required to reproduce. That inflates the denominator and deflates recall
-# for reasons unrelated to reading the page -- the same class of bug as the
-# layout directives below, and it survived the fix for those.
-_NUM_RE = re.compile(
-    r"(?<![\w\\])(?<!\w-)-?\d+(?:\.\d+)?(?![\w-]*[A-Za-z])"
-)
+# excludes `T5` (digit glued directly to a letter); hyphenated identifiers such
+# as `T5-11B` and `FEVER-3-way` are removed by _IDENT_RE below instead.
+#
+# An earlier attempt did this with lookarounds on _NUM_RE itself. That rejected
+# real data in the same stroke: `3-5` lost its upper bound, `2019-2020` lost
+# 2020, and `12kg` disappeared entirely. Suppressing identifier digits must not
+# cost measurements -- a ground truth that silently drops valid numbers is worse
+# than one that admits a few names.
+_NUM_RE = re.compile(r"(?<![\w\\])-?\d+(?:\.\d+)?")
+
+# A hyphenated token that STARTS with a letter is a name, not a measurement:
+# T5-11B, FEVER-3-way, RAG-Token, BERT-base-2. Its digits are version and task
+# labels. A token starting with a digit (3-5, 2019-2020, 12kg) is data and is
+# left alone.
+_IDENT_RE = re.compile(r"\b[A-Za-z]\w*(?:-\w+)+\b")
+
 # LaTeX noise that would otherwise contribute spurious digits. The second
 # alternative matters more than it looks: \multicolumn{2}{c}{...} and
 # \cmidrule(lr){2-3} are *layout* directives, and their arguments were being
@@ -82,14 +89,18 @@ _NUM_RE = re.compile(
 # which were multicolumn spans -- deflating recall for a reason that has nothing
 # to do with reading the page.
 _STRIP_RE = re.compile(
-    r"\\(?:cite|ref|label|footnote|includegraphics)\s*(?:\[[^\]]*\])?\{[^}]*\}"
+    _IDENT_RE.pattern
+    + r"|\\(?:cite|ref|label|footnote|includegraphics)\s*(?:\[[^\]]*\])?\{[^}]*\}"
     # \multirow takes THREE arguments -- {nrows}{width}{text} -- and only the
     # third is content. Stripping one group left `{0.12\linewidth}` behind, so
     # a *column width* was counted as a table number. \multicolumn is
     # {ncols}{align}{text}; its {align} carries no digits, so one group is
     # enough there, but being explicit is cheaper than rediscovering this.
-    r"|\\multirow\s*\{[^}]*\}\s*\{[^}]*\}"
-    r"|\\multicolumn\s*\{[^}]*\}\s*\{[^}]*\}"
+    # The optional position argument is valid TeX and appears in real papers:
+    # \multirow[t]{2}{*}{Model}. Without allowing for it the macro is not
+    # matched at all and its row-count digit leaks into the ground truth.
+    r"|\\multirow\s*(?:\[[^\]]*\])?\s*\{[^}]*\}\s*\{[^}]*\}"
+    r"|\\multicolumn\s*(?:\[[^\]]*\])?\s*\{[^}]*\}\s*\{[^}]*\}"
     r"|\\(?:cmidrule|cline)\s*(?:\([^)]*\))?\s*\{[^}]*\}"
 )
 _MACRO_COMPUTED = re.compile(r"\\(pgfmathprintnumber|csname|the[a-z]+)")
@@ -205,10 +216,20 @@ def extract_source_tables(blob: bytes, *, min_numbers: int = 4) -> list[SourceTa
             body = _COLSPEC_RE.sub("", body.lstrip(), count=1)
             cleaned = _STRIP_RE.sub(" ", body)
             nums = [normalize_number(t) for t in _NUM_RE.findall(cleaned)]
-            # Drop column-spec digits like p{0.3\textwidth} leakage and tiny tables.
+            # Table identity follows position in the document, NOT position among
+            # the tables that survive filtering. Incrementing `idx` after the
+            # filter meant that excluding one table renumbered every later one,
+            # so table 4 silently became table 3 and was then scored against
+            # table 3's page and caption. Any change to what counts as a number
+            # -- and this file has had several -- could therefore shift the whole
+            # ground-truth mapping without touching a single metric definition.
+            idx += 1
+            # Below the threshold the table is not numerically gradeable: the
+            # qualitative "Examples from generation tasks" table in the RAG paper
+            # contains no data numbers at all, only \multirow layout digits. It
+            # is skipped for scoring, but it keeps its index.
             if len(nums) < min_numbers:
                 continue
-            idx += 1
             tables.append(SourceTable(index=idx, numbers=nums, raw=body[:400],
                                       body=body))
     return tables

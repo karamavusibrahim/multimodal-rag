@@ -359,12 +359,12 @@ dedicated table transcription, scored against the same LaTeX ground truth:
 
 | table | whole-page recall | crop recall |
 |---|---|---|
-| 1 | 1.000 | 1.000 |
+| 1 | 0.000 | **0.926** |
 | 2 | 0.043 | **1.000** |
 | 3 | 0.333 | 0.333 |
 | 4 | 0.000 | **1.000** |
 | 5 | 0.000 | 0.100 |
-| 6 | 0.034 | **0.898** |
+| 6 | 0.034 | 0.898 |
 | 7 | 1.000 | 1.000 |
 | **mean** | **0.202** | **0.751** |
 
