@@ -82,6 +82,18 @@ _NUM_RE = re.compile(r"(?<![\w\\])-?\d+(?:\.\d+)?")
 # left alone.
 _IDENT_RE = re.compile(r"\b[A-Za-z]\w*(?:-\w+)+\b")
 
+# ...with one exception. `Q1-2024` and `May-2024` are letter-leading hyphenated
+# tokens too, and dropping them whole discarded the year, which is a real period
+# label a transcription should reproduce. A four-digit year segment survives the
+# strip; everything else in the token does not, so `COVID-19` and `T5-11B` still
+# contribute nothing.
+_YEAR_SEGMENT = re.compile(r"^(?:19|20)\d{2}$")
+
+
+def _strip_identifier(m: re.Match[str]) -> str:
+    years = [seg for seg in m.group(0).split("-") if _YEAR_SEGMENT.match(seg)]
+    return (" " + " ".join(years) + " ") if years else " "
+
 # LaTeX noise that would otherwise contribute spurious digits. The second
 # alternative matters more than it looks: \multicolumn{2}{c}{...} and
 # \cmidrule(lr){2-3} are *layout* directives, and their arguments were being
@@ -89,8 +101,7 @@ _IDENT_RE = re.compile(r"\b[A-Za-z]\w*(?:-\w+)+\b")
 # which were multicolumn spans -- deflating recall for a reason that has nothing
 # to do with reading the page.
 _STRIP_RE = re.compile(
-    _IDENT_RE.pattern
-    + r"|\\(?:cite|ref|label|footnote|includegraphics)\s*(?:\[[^\]]*\])?\{[^}]*\}"
+    r"\\(?:cite|ref|label|footnote|includegraphics)\s*(?:\[[^\]]*\])?\{[^}]*\}"
     # \multirow takes THREE arguments -- {nrows}{width}{text} -- and only the
     # third is content. Stripping one group left `{0.12\linewidth}` behind, so
     # a *column width* was counted as a table number. \multicolumn is
@@ -214,8 +225,7 @@ def extract_source_tables(blob: bytes, *, min_numbers: int = 4) -> list[SourceTa
             # `body` opens with the column spec -- {lrrr}, or {p{0.3\textwidth}c}
             # whose digits are widths, not data. Drop it before counting.
             body = _COLSPEC_RE.sub("", body.lstrip(), count=1)
-            cleaned = _STRIP_RE.sub(" ", body)
-            nums = [normalize_number(t) for t in _NUM_RE.findall(cleaned)]
+            nums = numbers_in(body)
             # Table identity follows position in the document, NOT position among
             # the tables that survive filtering. Incrementing `idx` after the
             # filter meant that excluding one table renumbered every later one,
@@ -236,7 +246,17 @@ def extract_source_tables(blob: bytes, *, min_numbers: int = 4) -> list[SourceTa
 
 
 def numbers_in(text: str) -> list[str]:
-    return [normalize_number(t) for t in _NUM_RE.findall(text)]
+    """Data numbers from any text, gold or predicted.
+
+    Gold used to be cleaned through `_STRIP_RE` here while predictions were
+    tokenised raw, so identical text produced different token sets: `T5-11B`
+    contributed "11" to the prediction and nothing to the gold, charging the
+    extractor a precision penalty for transcribing the page correctly. Whatever
+    counts as a number has to count identically on both sides, so the cleaning
+    lives inside this one function and both callers go through it.
+    """
+    cleaned = _IDENT_RE.sub(_strip_identifier, _STRIP_RE.sub(" ", text))
+    return [normalize_number(t) for t in _NUM_RE.findall(cleaned)]
 
 
 def grid_numbers(content: str) -> list[str] | None:
@@ -290,9 +310,16 @@ def main() -> int:
 
     blob = fetch_source(args.arxiv_id, Path("data/raw") / f"{args.arxiv_id}.tar.gz")
     source_tables = extract_source_tables(blob)
+    # Rendered vs gradeable are different counts and printing only the second
+    # one under a "source tables" label is how the docs came to disagree with
+    # the code. A table with no data numbers is still a table in the paper.
+    all_source = extract_source_tables(blob, min_numbers=0)
     gold_pages = load_page_ground_truth(args.arxiv_id, args.page_ground_truth)
 
-    print(f"source tables in LaTeX:      {len(source_tables)}")
+    skipped = sorted({t.index for t in all_source} - {t.index for t in source_tables})
+    print(f"source tables rendered:      {len(all_source)}")
+    print(f"  numerically gradeable:     {len(source_tables)}"
+          + (f"  (skipped: {skipped}, no data numbers)" if skipped else ""))
     print(f"tables extracted from pages: {len(extracted_tables)}")
     print(f"candidate elements:          {len(candidates)}\n")
 
@@ -364,10 +391,21 @@ def main() -> int:
     # scores 1.000 above and is unusable: the label-to-figure association, which
     # is the only thing that makes a cell citable, is exactly what was lost.
     by_id = {e["element_id"]: e for e in candidates}
+    # Table indices are sparse: a table that is not numerically gradeable keeps
+    # its index but is absent from this list, so `source_tables[table - 1]` is
+    # the wrong body for every entry after the first gap -- and raises
+    # IndexError once the index exceeds the list length. Look the table up by
+    # the identity it actually carries.
+    src_by_index = {t.index: t for t in source_tables}
     structure_rows: list[dict[str, Any]] = []
     for r in matched:
         el = by_id.get(r.get("element_id") or "")
-        src_grid = parse_latex_grid(source_tables[r["table"] - 1].body)
+        src = src_by_index.get(r["table"])
+        if src is None:
+            structure_rows.append({"table": r["table"], "gradeable": False,
+                                   "why": "source table not in the graded set"})
+            continue
+        src_grid = parse_latex_grid(src.body)
         pred_grid = parse_predicted_grid(el["content"]) if el else None
         if pred_grid is None:
             structure_rows.append({"table": r["table"], "gradeable": False,

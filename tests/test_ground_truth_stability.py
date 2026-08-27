@@ -22,16 +22,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "eval"))
 
-from table_accuracy import (  # noqa: E402
-    _STRIP_RE,
-    SourceTable,
-    extract_source_tables,
-    numbers_in,
-)
+import pytest  # noqa: E402
+
+from table_accuracy import extract_source_tables, numbers_in  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
+CACHED_SOURCE = ROOT / "data/raw/2005.11401.tar.gz"
 
 
 def clean(text: str) -> list[str]:
-    return numbers_in(_STRIP_RE.sub(" ", text))
+    """Both gold and predictions go through the same function, deliberately.
+
+    Cleaning gold through `_STRIP_RE` while tokenising predictions raw made
+    identical text produce different token sets and charged the extractor a
+    precision penalty for reading the page correctly.
+    """
+    return numbers_in(text)
 
 
 class TestIdentifierDigits:
@@ -98,3 +104,84 @@ class TestTableIdentity:
     def test_no_filtering_yields_contiguous_indices(self):
         blob = self._archive([" 1 & 2 & 3 & 4 ", " 5 & 6 & 7 & 8 "])
         assert [t.index for t in extract_source_tables(blob, min_numbers=4)] == [1, 2]
+
+
+class TestSymmetry:
+    def test_gold_and_prediction_tokenise_identically(self):
+        # The asymmetry bug: `T5-11B & 44.5` gave gold ["44.5"] and prediction
+        # ["11", "44.5"], so a perfect transcription scored precision 0.5.
+        for text in ("T5-11B & 44.5", r"\multirow[t]{2}{*}{M} & 1 & 4",
+                     "Total 12,914 & 8,701"):
+            assert numbers_in(text) == numbers_in(text)
+            assert "11" not in numbers_in("T5-11B & 44.5")
+
+
+class TestPeriodLabels:
+    def test_a_year_survives_a_letter_leading_token(self):
+        # Q1-2024 and May-2024 are period labels, not model names. Dropping the
+        # whole token discarded a real year.
+        assert clean("Q1-2024") == ["2024"]
+        assert clean("May-2024") == ["2024"]
+
+    def test_a_name_that_merely_contains_digits_does_not(self):
+        assert clean("COVID-19") == []
+        assert clean("T5-11B") == []
+
+
+@pytest.mark.skipif(not CACHED_SOURCE.exists(),
+                    reason="cached arXiv source not present")
+class TestAgainstTheRealPaper:
+    """An executable check against the actual paper, not a synthetic fixture.
+
+    Every unit test above passed while `eval/table_accuracy.py` raised
+    IndexError on this archive: the sparse-index fix left a `source_tables[i-1]`
+    lookup behind, which is wrong for every table after a gap and out of range
+    at the end. Synthetic fixtures could not see it because they never had a
+    gap and a high index at once.
+    """
+
+    def test_the_paper_yields_seven_tables_at_stable_indices(self):
+        blob = CACHED_SOURCE.read_bytes()
+        allt = extract_source_tables(blob, min_numbers=0)
+        assert [t.index for t in allt] == [1, 2, 3, 4, 5, 6, 7]
+
+    def test_filtering_leaves_a_gap_rather_than_renumbering(self):
+        blob = CACHED_SOURCE.read_bytes()
+        graded = extract_source_tables(blob, min_numbers=4)
+        assert [t.index for t in graded] == [1, 2, 4, 5, 6, 7], (
+            "table 3 is the qualitative examples table and is not numerically "
+            "gradeable, but the tables after it must keep their identities"
+        )
+
+    @pytest.mark.skipif(not (ROOT / "data/processed").exists(),
+                        reason="extracted element index not present")
+    def test_the_evaluator_runs_to_completion_on_the_paper(self):
+        """Execute the CLI. This is the test that was missing.
+
+        44 unit tests passed while this command raised IndexError, because none
+        of them ran the evaluator end to end against a corpus that has both a
+        gap in its table indices and a table numbered above the length of the
+        graded list. A synthetic fixture will not reproduce that combination by
+        accident; the real paper does.
+        """
+        import subprocess
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            r = subprocess.run(
+                [sys.executable, "eval/table_accuracy.py",
+                 "--out", str(Path(d) / "out.json")],
+                cwd=ROOT, capture_output=True, text=True, timeout=300,
+            )
+        assert r.returncode == 0, (
+            f"evaluator exited {r.returncode}\n{r.stderr[-2000:]}"
+        )
+
+    def test_indices_can_be_looked_up_by_id_not_offset(self):
+        blob = CACHED_SOURCE.read_bytes()
+        graded = extract_source_tables(blob, min_numbers=4)
+        by_index = {t.index: t for t in graded}
+        # The crash: offset 7-1=6 is out of range for a 6-element list.
+        assert 7 in by_index
+        assert by_index[7].index == 7

@@ -192,13 +192,13 @@ be measuring row-*count* similarity and nobody would notice.
 
 ```
 $ uv run pytest tests/ -q
-21 passed
+45 passed
 ```
 
 Measured on the one gradeable table:
 
 ```
-table 1:  row 1.000 (baseline 0.913)   col 1.000 (baseline 0.735)
+table 7:  row 1.000 (baseline 0.913)   col 1.000 (baseline 0.735)
           source shape [9, 4]  ->  predicted [9, 4]
 ```
 
@@ -274,8 +274,9 @@ the original entry preserved in the artifact under
 One document and label-derived queries, so a demonstrated unlock rather than a
 benchmark. For calibration, the published leaderboard for this class of model
 is ViDoRe (V1+V2, NDCG@5), where late-interaction systems currently sit in the
-mid-80s — this repo measures a different thing on 7 tables from one paper and
-should not be read against those numbers. Details and caveats in REPORT §6.2.
+mid-80s. That figure is context from published leaderboards, not something
+this repository can check offline, and it is measuring a different task on a
+different corpus — it is here to place the work, not to compare against. Details and caveats in REPORT §6.2.
 
 ## Layout
 
@@ -324,8 +325,12 @@ agentic reasoning over it → perception as the input to both.
   rendering, page extraction and the NIM client; `retrieve/` is an empty
   package and there is no `ask()`. Retrieval is measured in `eval/`, not
   served. What this repo is, precisely: an instrumented perception-and-
-  retrieval *measurement harness* for visually-rich pages. Cloning it lets you
-  reproduce the numbers above; it does not let you ask a question yet.
+  retrieval *measurement harness* for visually-rich pages. It does not let you
+  ask a question yet — and cloning it does **not** reproduce the numbers above
+  either: the arXiv source archive and the page index are gitignored, the
+  visual arm's query vectors were never committed, and several measurements
+  need hosted API calls. The result JSON is the record; the run is not
+  repeatable from a clean checkout.
 - Chart data transcription is unverified — the model reads labelled values, but
   nothing checks them against the underlying figure.
 - Cost scales linearly with pages: one vision call each, no caching across runs.

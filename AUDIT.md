@@ -102,8 +102,10 @@ Limitations section.
 - **Every denominator here is 7 tables or 19 pages from one paper.** Noted in
   Limitations. For calibration against the field, the standard benchmark for
   this class of model is ViDoRe (V1+V2, NDCG@5), where late-interaction systems
-  currently sit in the mid-80s; the numbers here measure something narrower on
-  a much smaller set and should not be read against that leaderboard.
+  currently sit in the mid-80s. That figure comes from published leaderboards
+  and is **not** verifiable from anything in this repository, which makes it
+  the one number in this audit that was not checked from repo files. It is
+  context for placing the work, not a comparison.
 
 ## Highest-value change left
 
@@ -162,3 +164,72 @@ all of it, including that filtering does not renumber.
 - **The ViDoRe comparison is not offline-verifiable** and does not belong in an
   audit that claims every number was checked from repository files. Kept as
   context, labelled as such.
+
+
+---
+
+## Third pass
+
+The second pass fixed table identity and broke the evaluator doing it.
+
+### The sparse-index fix left a list-offset lookup behind
+
+Making indices sparse (`[1, 2, 4, 5, 6, 7]`) while `main()` still did
+`source_tables[r["table"] - 1]` meant every table after the gap read the wrong
+source body, and table 7 raised `IndexError` outright. `eval/table_accuracy.py`
+did not run at all. Lookups are now keyed by index.
+
+**45 unit tests passed while the evaluator crashed.** That is the whole lesson
+of this pass: none of them executed it. `TestAgainstTheRealPaper` now runs the
+CLI against the cached paper and asserts exit 0, and it fails when the lookup
+fix is reverted (verified). A synthetic fixture could not have caught this — it
+needs a corpus with both a gap in its indices *and* a table numbered above the
+length of the graded list, which the real paper has and a hand-written fixture
+does not.
+
+### Identifier cleaning was applied to gold only
+
+Gold went through `_STRIP_RE`; predictions were tokenised raw. For identical
+text `T5-11B & 44.5`, gold became `["44.5"]` and the prediction `["11", "44.5"]`
+— charging the extractor a precision penalty for transcribing the page
+correctly. Both sides now go through `numbers_in()`, which owns the cleaning.
+The earlier tests only exercised the gold path, which is why this passed.
+
+### Identifier stripping ate real period labels
+
+`Q1-2024` and `May-2024` are letter-leading hyphenated tokens, so the whole
+token was dropped along with its year. A four-digit year segment now survives;
+`COVID-19` and `T5-11B` still contribute nothing.
+
+### Also corrected
+
+- The evaluator printed the gradeable count under a "source tables in LaTeX"
+  label. It now prints rendered (7) and gradeable (6) separately, naming the
+  skipped index. Conflating the two is how the docs and the code drifted apart.
+- README reported 21 tests, and elsewhere 29; the suite has 45.
+- The structure result was labelled table 1; the artifact says table 7.
+- "Cloning it reproduces the numbers" is withdrawn. The source archive and page
+  index are gitignored, query vectors were never committed, and several
+  measurements need hosted APIs.
+- The ViDoRe figure is now labelled as the one number here that cannot be
+  checked from repository files.
+
+## Still open after three passes
+
+Recorded, not fixed:
+
+- **The committed artifacts do not match their producers.** The current
+  tokeniser gives different `n_numbers` than the saved run, `detection.json`
+  lacks fields `detection.py` now writes, and `visual_retrieval.py` cannot
+  regenerate the MRR bounds in its own artifact. Every published metric here
+  predates a correction, and none can be regenerated without API access.
+- `\input used` (unbraced) is not recognised, so a referenced file can be
+  missed — the mirror image of the unrendered-table bug.
+- A partial page map disables every unmapped table rather than constraining
+  only mapped ones.
+- Table matching is not one-to-one; one element can satisfy two source tables.
+- `crop_transcribe` renumbers boxes after filtering, so recorded provenance
+  points at the wrong rectangle.
+- `detection.py` hardcodes the RAG paper's table pages.
+- `normalize_number` uses `%g`, collapsing `1234567` and `1234568`.
+- `12,914` still tokenises as `12` and `914`, which inflates partial matches.
