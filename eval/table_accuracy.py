@@ -90,9 +90,23 @@ _IDENT_RE = re.compile(r"\b[A-Za-z]\w*(?:-\w+)+\b")
 _YEAR_SEGMENT = re.compile(r"^(?:19|20)\d{2}$")
 
 
+# Segments that mark a token as a *period label* rather than a name: Q1-2024,
+# FY-2024, H2-2024, May-2024. `BERT-2020` and `ISO-2022` are names that happen
+# to end in year-shaped digits, and keeping their years reintroduced the
+# identifier-digit leak this strip exists to stop.
+_PERIOD_SEGMENT = re.compile(
+    r"^(?:[QH][1-4]|FY|fiscal|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|"
+    r"Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|"
+    r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)$", re.I)
+
+
 def _strip_identifier(m: re.Match[str]) -> str:
-    years = [seg for seg in m.group(0).split("-") if _YEAR_SEGMENT.match(seg)]
-    return (" " + " ".join(years) + " ") if years else " "
+    segs = m.group(0).split("-")
+    years = [g for g in segs if _YEAR_SEGMENT.match(g)]
+    if years and all(_YEAR_SEGMENT.match(g) or _PERIOD_SEGMENT.match(g)
+                     for g in segs):
+        return " " + " ".join(years) + " "
+    return " "
 
 # LaTeX noise that would otherwise contribute spurious digits. The second
 # alternative matters more than it looks: \multicolumn{2}{c}{...} and
@@ -221,7 +235,13 @@ def extract_source_tables(blob: bytes, *, min_numbers: int = 4) -> list[SourceTa
         for m in _TABULAR_RE.finditer(tex):
             body = m.group(2)
             if _MACRO_COMPUTED.search(body):
-                continue  # values computed at typeset time; not recoverable here
+                # Values computed at typeset time; not recoverable here. But the
+                # table still exists in the document, so it consumes an index --
+                # this skip sat before the increment and shifted every later
+                # table's identity, the exact bug fixed once already for the
+                # gradeability filter below.
+                idx += 1
+                continue
             # `body` opens with the column spec -- {lrrr}, or {p{0.3\textwidth}c}
             # whose digits are widths, not data. Drop it before counting.
             body = _COLSPEC_RE.sub("", body.lstrip(), count=1)
@@ -271,8 +291,11 @@ def grid_numbers(content: str) -> list[str] | None:
     grid = parse_predicted_grid(content)
     if grid is None:
         return None
-    return [normalize_number(t)
-            for row in grid for cell in row for t in _NUM_RE.findall(cell)]
+    # Same cleaning as everywhere else. This path used raw _NUM_RE, so a grid
+    # containing "T5-11B | 44.5" was charged for "11" against a gold set that
+    # had stripped it -- grid precision read 0.923 on a perfect transcription.
+    return [t for cell in (c for row in grid for c in row)
+            for t in numbers_in(cell)]
 
 
 def score(source: list[str], predicted: list[str]) -> tuple[float, float, int]:

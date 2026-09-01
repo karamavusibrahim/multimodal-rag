@@ -84,19 +84,32 @@ limitation of the whole evaluation (§5).
 ### 2.1 Content
 
 ```
-source tables rendered:      7
+> **Regenerated 2026-09-01 from committed code and committed inputs.** The
+> extraction elements are tracked and the transcripts are stored in the crop
+> artifact, so both tables below are now produced by the code in this repo,
+> offline — the drift between published numbers and executable code that three
+> audit passes kept finding is closed for these two artifacts. Numbers moved
+> again in the process, and the honest direction was down: the second
+> "matched" table had only ever been matching its own layout digits.
+
+```
+source tables rendered:      7      (6 numerically gradeable)
 tables extracted as tables:  1
-matched tables:              2/7   (coverage 28.6%)
-mean recall                  0.667
-mean precision               0.817   (whole element, incl. surrounding prose)
-grid precision               1.000   (grid region only, both matched tables)
+matched tables:              1/6   (coverage 17%)
+mean recall                  1.000   (the one matched table, read perfectly)
+mean precision               0.632   (whole element, incl. surrounding prose)
+grid precision               1.000   (grid region only)
 ```
 
-Per-table recall, sorted — all 7 values:
+Per-table recall over the 6 gradeable tables:
 
 ```
-1.000   0.333   |   0.043   0.034   0.000   0.000   0.000
+1.000   |   0.000   0.000   0.000   0.000   0.000
 ```
+
+Perfectly bimodal: one read essentially perfectly, five not found. The tail
+earlier revisions showed (`0.333 0.043 0.034`) was noise — layout digits and
+identifier digits the cleaned ground truth no longer counts.
 
 > **Stale relative to the current harness.** Every recall on this page was
 > computed before two further ground-truth fixes landed in
@@ -257,8 +270,10 @@ the current corpus — the corpus was checked — but any of them could bite a n
 paper silently.
 
 The first honest number reported for this project (mean recall 0.138) was worse
-than the final one (0.667) because the metric was broken, not because the
-pipeline improved. An evaluation harness is code, and it deserves the same
+than later ones because the metric was broken, not because the pipeline
+improved — and the matched-table mean has since moved again (to 1.000 over a
+single matched table) for the same reason, each time the ground truth got
+cleaner. An evaluation harness is code, and it deserves the same
 suspicion as the code it grades — the structure metric therefore ships with 21
 unit tests pinning its claimed invariances (row permutation, column permutation,
 title-row insertion), its claimed detections (transposition, a cell moved to
@@ -359,17 +374,20 @@ dedicated table transcription, scored against the same LaTeX ground truth:
 
 | table | whole-page recall | crop recall |
 |---|---|---|
-| 1 | 0.000 | **0.926** |
-| 2 | 0.043 | **1.000** |
-| 3 | 0.333 | 0.333 |
+| 1 | 0.000 | **1.000** |
+| 2 | 0.000 | **1.000** |
 | 4 | 0.000 | **1.000** |
-| 5 | 0.000 | 0.100 |
-| 6 | 0.034 | 0.898 |
+| 5 | 0.000 | 0.000 |
+| 6 | 0.000 | 0.889 |
 | 7 | 1.000 | 1.000 |
-| **mean** | **0.202** | **0.751** |
+| **mean** | **0.167** | **0.815** |
 
-Tables with at least one correctly transcribed number: **4/7 → 7/7.** Cost: one
-VLM call per detected box — six calls for the whole paper.
+(Rescored 2026-09-01 from the saved transcripts — `--reuse-results`, no API
+calls — against the cleaned ground truth; the qualitative table 3 is no longer
+gradeable, and table 5's former 0.100 was an identifier digit.)
+
+Tables with at least one correctly transcribed number: **1/6 → 5/6.** Cost: one
+VLM call per detected box.
 
 The same model that read 1 table off whole pages reads 4 tables at ≥0.9 recall
 when handed crops: the limiting factor was never transcription ability, it was
@@ -438,7 +456,7 @@ not a benchmark; the next step is paraphrased queries and a second document.
 
 The pipeline works as a transcriber and fails as a detector — and the fix is
 now measured, not merely indicated. Against LaTeX ground truth the
-single-prompt VLM pass recovers 28.6% of the paper's rendered tables (2/7) and types 1 of 19
+single-prompt VLM pass recovers 1 of the paper's 6 gradeable tables (17%) and types 1 of 19
 pages as containing one; a dedicated hosted detector finds **all four**
 table-bearing pages with zero confident false positives, for one cheap CV call
 per page. Of what the VLM transcribes, it invents nothing (grid precision

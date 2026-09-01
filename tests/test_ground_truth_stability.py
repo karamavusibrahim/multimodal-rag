@@ -185,3 +185,79 @@ class TestAgainstTheRealPaper:
         # The crash: offset 7-1=6 is out of range for a 6-element list.
         assert 7 in by_index
         assert by_index[7].index == 7
+
+
+class TestEndToEndSynthetic:
+    """Runs the evaluator CLI on a corpus built in the test.
+
+    The real-paper tests above are skipped in a clean checkout, because the
+    arXiv archive is gitignored -- which meant CI could not catch a revert of
+    the keyed-lookup fix. This fixture reproduces the crash conditions without
+    any ignored file: a computed-macro table and a qualitative table both
+    reserve indices, so the graded tables are sparse and the last one's index
+    exceeds the length of the graded list. Under the old offset lookup that is
+    an IndexError; under position-shifting skips it scores the wrong table.
+    """
+
+    BODIES = [
+        r" \pgfmathprintnumber{9} & 1 & 2 & 3 & 4 ",       # 1: computed, skipped
+        r" \multirow{3}{1.8cm}{prose only} & words ",       # 2: no data numbers
+        r" 41 & 42 \\ 43 & 44 ",                            # 3: graded
+        r" 51 & 52 \\ 53 & 54 ",                            # 4: graded, sparse top
+    ]
+
+    def _corpus(self, root: Path) -> None:
+        import io
+        import json
+        import tarfile
+
+        tex = "\n".join(
+            r"\begin{tabular}{lr}" + b + r"\end{tabular}" for b in self.BODIES
+        )
+        (root / "data/raw").mkdir(parents=True)
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            data = tex.encode()
+            info = tarfile.TarInfo("main.tex")
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+        (root / "data/raw/synthetic.tar.gz").write_bytes(buf.getvalue())
+
+        (root / "index").mkdir()
+        elements = [
+            {"element_id": "p1e0", "kind": "table", "page": 1,
+             "content": "41 | 42\n43 | 44"},
+            {"element_id": "p2e0", "kind": "table", "page": 2,
+             "content": "51 | 52\n53 | 54"},
+        ]
+        (root / "index/elements.jsonl").write_text(
+            "\n".join(json.dumps(e) for e in elements))
+        (root / "gt.json").write_text(json.dumps(
+            {"tables": [{"table": 3, "page": 1}, {"table": 4, "page": 2}]}))
+
+    def test_sparse_indices_survive_the_full_cli(self, tmp_path):
+        import json
+        import subprocess
+        import sys
+
+        self._corpus(tmp_path)
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "eval/table_accuracy.py"),
+             "--arxiv-id", "synthetic",
+             "--index", str(tmp_path / "index"),
+             "--page-ground-truth", str(tmp_path / "gt.json"),
+             "--out", str(tmp_path / "out.json")],
+            cwd=tmp_path, capture_output=True, text=True, timeout=120,
+        )
+        assert r.returncode == 0, f"evaluator failed:\n{r.stderr[-2000:]}"
+        out = json.loads((tmp_path / "out.json").read_text())
+        graded = {row["table"] for row in out["per_table"]}
+        assert graded == {3, 4}, (
+            f"graded tables were {graded}; the computed-macro and qualitative "
+            f"tables must reserve indices 1 and 2 without being scored"
+        )
+        recalls = {row["table"]: row["recall"] for row in out["per_table"]}
+        assert recalls == {3: 1.0, 4: 1.0}, (
+            f"per-table recall {recalls}; a shifted identity scores each table "
+            f"against the other page's element"
+        )

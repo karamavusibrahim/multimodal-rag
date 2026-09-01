@@ -233,3 +233,60 @@ Recorded, not fixed:
 - `detection.py` hardcodes the RAG paper's table pages.
 - `normalize_number` uses `%g`, collapsing `1234567` and `1234568`.
 - `12,914` still tokenises as `12` and `914`, which inflates partial matches.
+
+
+---
+
+## Fourth pass
+
+### Two more identity/symmetry leaks, same families as before
+
+- The computed-macro skip (`\pgfmathprintnumber`) sat before the index
+  increment, so a macro table still shifted every later table's identity — the
+  third instance of the same bug shape. Fixed; a synthetic end-to-end CLI test
+  now runs the whole evaluator on a corpus with a macro table, a qualitative
+  table and sparse graded indices, in a clean checkout with no gitignored
+  inputs, and fails when the fix is reverted (verified).
+- The year exception readmitted name digits: `BERT-2020` kept its 2020. A year
+  now survives only in tokens whose other segments are period markers
+  (Q1/H2/FY/month names).
+- `grid_numbers` still tokenised raw, so a perfect `T5-11B | 44.5` grid scored
+  precision 0.5 against cleaned gold. All number extraction now goes through
+  one function.
+
+### The artifacts are regenerated, and the honest direction was down
+
+With extraction elements tracked and crop transcripts stored in the artifact,
+both measurement artifacts are now produced offline by the committed code:
+
+| | was published | regenerated |
+|---|---|---|
+| gradeable tables | 7 | **6** (qualitative table has no data numbers) |
+| coverage | 2/7 (28.6%) | **1/6 (17%)** |
+| per-table recall | 1.000 0.333 + tail | **1.000, five zeros** |
+| matched precision | 0.817 | **0.632** |
+| crop mean recall | 0.202 → 0.751 | **0.167 → 0.815** |
+| any-correct-number | 4/7 → 7/7 | **1/6 → 5/6** |
+
+The second "matched" table had only ever been matching its own `\multirow`
+layout digits, and the recall tail was identifier noise. The distribution is
+now perfectly bimodal — one table read perfectly, five not found — which makes
+the report's detection-is-the-bottleneck argument stronger and its coverage
+number worse. Both docs now carry the regenerated figures with the retraction
+trail.
+
+The reproducibility claim is correspondingly split, and the README now says so:
+table accuracy and crop rescoring are offline-regenerable (the page index is
+tracked — an earlier caveat here wrongly said it was gitignored); the visual
+arm is not, and stays marked fixed-vintage.
+
+## Still open after four passes
+
+- The visual-retrieval artifact remains unverifiable offline and its producer
+  cannot emit the published MRR bounds.
+- `\input used` (unbraced) is still unrecognised; partial page maps still
+  disable unmapped tables; matching is still not one-to-one; box provenance is
+  still renumbered after filtering; `normalize_number` still collapses
+  near-identical values; `detection.py` still hardcodes the RAG paper's pages;
+  `pages.py` still indexes truncated non-JSON model output verbatim.
+- `detection.json` still predates its producer's schema.

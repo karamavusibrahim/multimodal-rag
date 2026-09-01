@@ -115,18 +115,39 @@ uv run python eval/table_accuracy.py --arxiv-id 2005.11401
 Measured on the full 19-page RAG paper (Lewis et al., 2020):
 
 ```
-source tables rendered:      7
-matched tables:              2/7   (coverage 28.6%)
-mean recall                  0.667   (over the 2 matched)
-mean precision               0.817   (whole element, incl. surrounding prose)
-grid precision               1.000   (grid region only, both matched tables)
+> **Regenerated 2026-09-01 from committed code and committed inputs.** The
+> extraction elements are tracked and the transcripts are stored in the crop
+> artifact, so both tables below are now produced by the code in this repo,
+> offline — the drift between published numbers and executable code that three
+> audit passes kept finding is closed for these two artifacts. Numbers moved
+> again in the process, and the honest direction was down: the second
+> "matched" table had only ever been matching its own layout digits.
+
+```
+source tables rendered:      7      (6 numerically gradeable; the qualitative
+                                     examples table has no data numbers)
+matched tables:              1/6   (coverage 17%)
+mean recall                  1.000   (the one matched table, read perfectly)
+mean precision               0.632   (whole element, incl. surrounding prose)
+grid precision               1.000   (grid region only)
+```
+<!-- regenerated block replaces: -->
+```
+(superseded 2026-09-01)
 ```
 
-**Coverage is the failure, not fidelity.** The per-table recalls, all 7:
+**Coverage is the failure, not fidelity.** The per-table recalls over the 6
+gradeable tables:
 
 ```
-1.000  0.333  |  0.043  0.034  0.000  0.000  0.000
+1.000  |  0.000  0.000  0.000  0.000  0.000
 ```
+
+Perfectly bimodal now: one table read essentially perfectly, five not found at
+all. Earlier revisions showed a tail (`0.333`, `0.043`, `0.034`) — all of it
+was noise the cleaned ground truth no longer counts: the `0.333` was the
+qualitative examples table matching its own `\multirow` layout digits, and the
+small values were identifier digits shared with prose.
 
 No table cleared 0.35 except the one read essentially perfectly; the tail is
 coincidental digit overlap with prose paragraphs, not degraded reads. (An
@@ -234,9 +255,9 @@ the same LaTeX ground truth:
 
 | | whole page | crops |
 |---|---|---|
-| mean recall (all 7 tables) | 0.202 | **0.751** |
+| mean recall (6 gradeable tables) | 0.167 | **0.815** |
 | tables at ≥0.9 recall | 1 | **4** |
-| tables with any correct number | 4/7 | **7/7** |
+| tables with any correct number | 1/6 | **5/6** |
 
 Same model, same pages: the limiting factor was never transcription ability
 but attention allocation on a full page. The residual misses sit exactly where
@@ -306,9 +327,9 @@ agentic reasoning over it → perception as the input to both.
 
 ## Limitations
 
-- **Table detection is the bottleneck: 28.6% coverage (2/7), 1 of 19 pages
+- **Table detection is the bottleneck: 17% coverage (1/6), 1 of 19 pages
   typed as a table.** Measured, not asserted — see above. Fidelity when a table
-  *is* found is fine (recall 0.667 over the matched two); finding it is not.
+  *is* found is perfect (recall 1.000 on the one match); finding it is not.
 - **Structure is measured on one table.** The metric is tested (29 unit tests
   pin its invariances and the page-parsing normalisation), but n=1 gradeable is
   an existence proof that lossless extraction happens, not evidence about how
@@ -326,11 +347,12 @@ agentic reasoning over it → perception as the input to both.
   package and there is no `ask()`. Retrieval is measured in `eval/`, not
   served. What this repo is, precisely: an instrumented perception-and-
   retrieval *measurement harness* for visually-rich pages. It does not let you
-  ask a question yet — and cloning it does **not** reproduce the numbers above
-  either: the arXiv source archive and the page index are gitignored, the
-  visual arm's query vectors were never committed, and several measurements
-  need hosted API calls. The result JSON is the record; the run is not
-  repeatable from a clean checkout.
+  ask a question yet. Reproducibility is now split: the table-accuracy and
+  crop-transcription numbers ARE regenerable offline — the extraction index
+  (`data/processed/`) is tracked and the transcripts are stored in the crop
+  artifact — given the arXiv source archive, which is gitignored. The visual
+  arm is not: its query vectors were never committed and re-embedding needs
+  hosted API calls.
 - Chart data transcription is unverified — the model reads labelled values, but
   nothing checks them against the underlying figure.
 - Cost scales linearly with pages: one vision call each, no caching across runs.
