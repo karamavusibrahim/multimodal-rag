@@ -60,3 +60,9 @@ def test_unknown_kinds_are_normalised_to_text():
 def test_empty_page_returns_nothing_rather_than_a_blank_element():
     assert run('{"elements": []}') == []
     assert run("   ") == []
+
+
+def test_truncated_json_is_not_indexed_as_content():
+    # A reply cut off mid-structure is scaffolding, not page text.
+    assert run('{"elements":[') == []
+    assert run('[{"kind": "te') == []

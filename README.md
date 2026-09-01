@@ -82,7 +82,8 @@ cp .env.example .env    # NVIDIA_API_KEY=nvapi-...
 
 ```bash
 # arXiv is the default corpus: open access, dense with results tables and plots
-uv run python scripts/ingest.py --url https://arxiv.org/pdf/2005.11401
+uv run python scripts/ingest.py --url https://arxiv.org/pdf/2005.11401 --max-pages 19
+# (--max-pages defaults to 8; the numbers in this README come from all 19 pages)
 
 # or a local file
 uv run python scripts/ingest.py --pdf data/raw/report.pdf
@@ -114,7 +115,6 @@ uv run python eval/table_accuracy.py --arxiv-id 2005.11401
 
 Measured on the full 19-page RAG paper (Lewis et al., 2020):
 
-```
 > **Regenerated 2026-09-01 from committed code and committed inputs.** The
 > extraction elements are tracked and the transcripts are stored in the crop
 > artifact, so both tables below are now produced by the code in this repo,
@@ -124,27 +124,21 @@ Measured on the full 19-page RAG paper (Lewis et al., 2020):
 > "matched" table had only ever been matching its own layout digits.
 
 ```
-source tables rendered:      7      (6 numerically gradeable; the qualitative
-                                     examples table has no data numbers)
-matched tables:              1/6   (coverage 17%)
-mean recall                  1.000   (the one matched table, read perfectly)
-mean precision               0.632   (whole element, incl. surrounding prose)
+source tables rendered:      7      (all 7 numerically gradeable)
+matched tables:              2/7   (coverage 29%)
+mean recall                  1.000   (both matched tables read perfectly)
+mean precision               0.816   (whole element, incl. surrounding prose)
 grid precision               1.000   (grid region only)
-```
-<!-- regenerated block replaces: -->
-```
-(superseded 2026-09-01)
 ```
 
 **Coverage is the failure, not fidelity.** The per-table recalls over the 6
 gradeable tables:
 
 ```
-1.000  |  0.000  0.000  0.000  0.000  0.000
+1.000  1.000  |  0.000  0.000  0.000  0.000  0.000
 ```
 
-Perfectly bimodal now: one table read essentially perfectly, five not found at
-all. Earlier revisions showed a tail (`0.333`, `0.043`, `0.034`) — all of it
+Perfectly bimodal now: two tables read perfectly, five not found at all. Earlier revisions showed a tail (`0.333`, `0.043`, `0.034`) — all of it
 was noise the cleaned ground truth no longer counts: the `0.333` was the
 qualitative examples table matching its own `\multirow` layout digits, and the
 small values were identifier digits shared with prose.
@@ -173,8 +167,9 @@ Two bugs were in the harness rather than the pipeline, and both inflated failure
 
 - **LaTeX layout digits were counted as data.** `\multicolumn{2}{c}{...}` and
   `\cmidrule(lr){2-3}` are directives; their arguments were entering the ground
-  truth. Table 7 scored 81 "numbers" of which ~21 were column spans, deflating
-  recall for a reason unrelated to reading the page. Stripped, it has 59.
+  truth. The ablations table (table 8 under the numbering of the day, table 6
+  now) scored 81 "numbers" of which ~21 were column spans, deflating recall for
+  a reason unrelated to reading the page. Under the current tokenizer it has 54.
 - **A single shared digit counted as a match.** Tables 7 and 8 both "matched" the
   same element on overlap of 1, making coverage read 100% when it was 25%. Now
   gated at ≥3 overlapping numbers and ≥20% recall.
@@ -213,7 +208,7 @@ be measuring row-*count* similarity and nobody would notice.
 
 ```
 $ uv run pytest tests/ -q
-45 passed
+51 passed
 ```
 
 Measured on the one gradeable table:
@@ -255,9 +250,9 @@ the same LaTeX ground truth:
 
 | | whole page | crops |
 |---|---|---|
-| mean recall (6 gradeable tables) | 0.167 | **0.815** |
-| tables at ≥0.9 recall | 1 | **4** |
-| tables with any correct number | 1/6 | **5/6** |
+| mean recall (all 7 tables) | 0.286 | **0.841** |
+| tables at ≥0.9 recall | 2 | **5** |
+| tables with any correct number | 2/7 | **6/7** |
 
 Same model, same pages: the limiting factor was never transcription ability
 but attention allocation on a full page. The residual misses sit exactly where
@@ -327,11 +322,11 @@ agentic reasoning over it → perception as the input to both.
 
 ## Limitations
 
-- **Table detection is the bottleneck: 17% coverage (1/6), 1 of 19 pages
+- **Table detection is the bottleneck: 29% coverage (2/7), 1 of 19 pages
   typed as a table.** Measured, not asserted — see above. Fidelity when a table
-  *is* found is perfect (recall 1.000 on the one match); finding it is not.
-- **Structure is measured on one table.** The metric is tested (29 unit tests
-  pin its invariances and the page-parsing normalisation), but n=1 gradeable is
+  *is* found is perfect (recall 1.000 on both matches); finding it is not.
+- **Structure is measured on one table.** The metric is tested (the suite pins
+  its invariances and the page-parsing normalisation), but n=1 gradeable is
   an existence proof that lossless extraction happens, not evidence about how
   often.
 - Single paper, 7 rendered tables. Enough to establish the bimodal shape and

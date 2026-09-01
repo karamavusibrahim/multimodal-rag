@@ -142,8 +142,14 @@ def extract_page(png: bytes, *, model: str = VLM_MODEL) -> list[dict[str, str]]:
         data = extract_json(raw)
     except Exception:
         # A page the parser cannot structure is still worth indexing as text --
-        # dropping it would silently create a hole in the corpus.
-        return [{"kind": "text", "content": raw.strip()}] if raw.strip() else []
+        # dropping it would silently create a hole in the corpus. Unless the
+        # reply *is* a broken structure: a truncated '{"elements":[' is JSON
+        # scaffolding, not page content, and indexing it verbatim puts
+        # punctuation soup into the corpus wearing a page number.
+        text = raw.strip()
+        if not text or text[0] in "{[":
+            return []
+        return [{"kind": "text", "content": text}]
 
     # Models return either {"elements": [...]} as asked, or a bare [...] list.
     # Both are unambiguous, so accept both rather than discarding good output.

@@ -97,7 +97,8 @@ _YEAR_SEGMENT = re.compile(r"^(?:19|20)\d{2}$")
 _PERIOD_SEGMENT = re.compile(
     r"^(?:[QH][1-4]|FY|fiscal|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|"
     r"Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|"
-    r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)$", re.I)
+    r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|"
+    r"Spring|Summer|Fall|Autumn|Winter)$", re.I)
 
 
 def _strip_identifier(m: re.Match[str]) -> str:
@@ -228,19 +229,35 @@ def normalize_number(tok: str) -> str:
     return f"{f:g}"
 
 
-def extract_source_tables(blob: bytes, *, min_numbers: int = 4) -> list[SourceTable]:
+def extract_source_tables(blob: bytes,
+                          *, min_numbers: int = MIN_MATCH_OVERLAP,
+                          ) -> list[SourceTable]:
+    """Source tables, with identity assigned by document position.
+
+    `min_numbers` defaults to `MIN_MATCH_OVERLAP`, deliberately: the match gate
+    accepts a table on three overlapping numbers, so refusing to *grade* a
+    table with three numbers contradicted the metric's own definition of
+    enough. That inconsistency excluded the RAG paper's examples table -- three
+    genuine visible values ("divided into 3 parts", "14th century") that both
+    the page read and the crop read recover.
+    """
     tables: list[SourceTable] = []
     idx = 0
     for tex in tex_files(blob):
         for m in _TABULAR_RE.finditer(tex):
             body = m.group(2)
             if _MACRO_COMPUTED.search(body):
-                # Values computed at typeset time; not recoverable here. But the
+                # Values computed at typeset time; not recoverable here. The
                 # table still exists in the document, so it consumes an index --
                 # this skip sat before the increment and shifted every later
                 # table's identity, the exact bug fixed once already for the
-                # gradeability filter below.
+                # gradeability filter below. At min_numbers=0 -- the "list what
+                # is rendered" mode -- it is also *returned*, else the rendered
+                # count silently undercounts documents that use such macros.
                 idx += 1
+                if min_numbers == 0:
+                    tables.append(SourceTable(index=idx, numbers=[],
+                                              raw=body[:400], body=body))
                 continue
             # `body` opens with the column spec -- {lrrr}, or {p{0.3\textwidth}c}
             # whose digits are widths, not data. Drop it before counting.

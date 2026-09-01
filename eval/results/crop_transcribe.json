@@ -1,7 +1,7 @@
 {
   "arxiv_id": "2005.11401",
   "model": "nvidia/nemotron-nano-12b-v2-vl",
-  "source_tables": 6,
+  "source_tables": 7,
   "n_transcripts": 6,
   "box_min_confidence": 0.0,
   "per_table": [
@@ -28,6 +28,18 @@
       "box": 0,
       "baseline_recall": 0.0,
       "baseline_kind": null
+    },
+    {
+      "table": 3,
+      "gold_page": 7,
+      "n_numbers": 3,
+      "recall": 1.0,
+      "precision": 1.0,
+      "overlap": 3,
+      "page": 7,
+      "box": 0,
+      "baseline_recall": 1.0,
+      "baseline_kind": "table"
     },
     {
       "table": 4,

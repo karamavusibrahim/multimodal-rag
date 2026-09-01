@@ -83,7 +83,6 @@ limitation of the whole evaluation (§5).
 
 ### 2.1 Content
 
-```
 > **Regenerated 2026-09-01 from committed code and committed inputs.** The
 > extraction elements are tracked and the transcripts are stored in the crop
 > artifact, so both tables below are now produced by the code in this repo,
@@ -93,39 +92,31 @@ limitation of the whole evaluation (§5).
 > "matched" table had only ever been matching its own layout digits.
 
 ```
-source tables rendered:      7      (6 numerically gradeable)
+source tables rendered:      7      (all 7 numerically gradeable)
 tables extracted as tables:  1
-matched tables:              1/6   (coverage 17%)
-mean recall                  1.000   (the one matched table, read perfectly)
-mean precision               0.632   (whole element, incl. surrounding prose)
+matched tables:              2/7   (coverage 29%)
+mean recall                  1.000   (both matched tables read perfectly)
+mean precision               0.816   (whole element, incl. surrounding prose)
 grid precision               1.000   (grid region only)
 ```
 
 Per-table recall over the 6 gradeable tables:
 
 ```
-1.000   |   0.000   0.000   0.000   0.000   0.000
+1.000   1.000   |   0.000   0.000   0.000   0.000   0.000
 ```
 
-Perfectly bimodal: one read essentially perfectly, five not found. The tail
+Perfectly bimodal: two read perfectly, five not found. The tail
 earlier revisions showed (`0.333 0.043 0.034`) was noise — layout digits and
 identifier digits the cleaned ground truth no longer counts.
 
-> **Stale relative to the current harness.** Every recall on this page was
-> computed before two further ground-truth fixes landed in
-> `eval/table_accuracy.py`: `\multirow{2}{0.12\linewidth}` was leaking the
-> column *width* `0.12` into the gold numbers (only one of its three argument
-> groups was stripped), and hyphenated identifiers such as `T5-11B` and
-> `FEVER-3-way` were contributing `11` and `3`. Both are names and layout, not
-> data. Recomputing needs the arXiv LaTeX source, which this repository does
-> not commit — so the numbers below stand as last measured, with the caveat
-> attached rather than quietly restated. The direction of the correction is
-> *not* predictable: the same tokens were counted on both the gold and the
-> transcription side, so removing them shrinks the numerator and the
-> denominator together.
->
-> Committing the source archive (or its checksum plus the parsed gold numbers)
-> is the fix, and is the single highest-value change left in this repo.
+> **This staleness note is itself retired.** An earlier revision warned here
+> that every recall predated two ground-truth fixes and could not be recomputed
+> without the arXiv source. That is no longer true: the extraction elements are
+> tracked, the crop transcripts are stored in their artifact, and both
+> artifacts — and every number in this section — are regenerated offline by the
+> committed code. The remaining offline-unverifiable measurement is the visual
+> retrieval arm, whose query vectors were never committed.
 
 Two corrections separate this list from the `1.000 0.333 | 0.200 0.200 0.130
 0.111 0.085 0.049` printed in an earlier revision. First, number matching is
@@ -150,11 +141,12 @@ and an unrelated prose paragraph.
 
 The middle is also not quite empty on the transcription side. The one element
 the model actually typed `"table"` (source table 4) is a *partial* read: 3 of 9
-numbers kept, predicted shape 5×4 against a source of 13×5, precision 1.000. So
-"either transcribed perfectly or never seen" overstates it — the run contains
-one perfect read, one genuine partial read, and six misses. What survives
-scrutiny is the ranking of causes: detection loses 6 tables outright;
-transcription degraded 1 and lost 0 numbers to invention.
+numbers kept, predicted shape 5×4 against a source of 13×5, precision 1.000 —
+described the *previous* ground truth. Under the regenerated one the run
+contains two perfect reads (tables 3 and 7) and five outright misses; the
+"genuine partial read" dissolved with the noise tokens that manufactured it.
+What survives scrutiny is unchanged and starker: detection loses 5 of 7 tables
+outright; transcription degraded 0 and invented 0.
 
 The distinction matters because it selects the fix. A spread clustered around
 0.5 would indicate lossy transcription, and the response would be better OCR
@@ -163,10 +155,10 @@ detection failure, and no amount of transcription tuning addresses it.
 
 **On the two precision numbers.** Whole-element precision charges the read for
 every number on the page around the table — page numbers, inline citations,
-narrative figures. The character-perfect read of table 1 scored 0.634 on that
+narrative figures. The character-perfect read of table 7 scored 0.632 on that
 basis, entirely from the appendix prose sharing its element. Scored against the
-grid region alone, both matched tables come out at **1.000: the model invented
-no numbers inside any grid it produced.** The whole-element figure is retained
+grid region alone, matched tables come out at **1.000: the model invented no
+numbers inside any grid it produced.** The whole-element figure is retained
 because it is what a downstream consumer of the raw element would experience,
 but it measures element segmentation, not transcription drift.
 
@@ -175,7 +167,7 @@ but it measures element segmentation, not transcription drift.
 One table cleared the gradeability threshold (≥6 shared numbers, ≥10 pairs):
 
 ```
-table 1:  23 shared numbers, 253 pairs
+table 7:  23 shared numbers, 253 pairs
           row agreement 1.000   (baseline 0.913)
           col agreement 1.000   (baseline 0.735)
           source shape [9, 4]  ->  predicted shape [9, 4]
@@ -376,25 +368,27 @@ dedicated table transcription, scored against the same LaTeX ground truth:
 |---|---|---|
 | 1 | 0.000 | **1.000** |
 | 2 | 0.000 | **1.000** |
+| 3 | 1.000 | 1.000 |
 | 4 | 0.000 | **1.000** |
 | 5 | 0.000 | 0.000 |
 | 6 | 0.000 | 0.889 |
 | 7 | 1.000 | 1.000 |
-| **mean** | **0.167** | **0.815** |
+| **mean** | **0.286** | **0.841** |
 
 (Rescored 2026-09-01 from the saved transcripts — `--reuse-results`, no API
 calls — against the cleaned ground truth; the qualitative table 3 is no longer
 gradeable, and table 5's former 0.100 was an identifier digit.)
 
-Tables with at least one correctly transcribed number: **1/6 → 5/6.** Cost: one
+Tables with at least one correctly transcribed number: **2/7 → 6/7.** Cost: one
 VLM call per detected box.
 
 The same model that read 1 table off whole pages reads 4 tables at ≥0.9 recall
 when handed crops: the limiting factor was never transcription ability, it was
 **attention allocation on a full page** — which is what §2.3 hypothesized and
 the detection pass (§6) made fixable. The residual misses line up with the
-detector's one known gap: tables 4 and 8 sit on the page where two boxes were
-drawn for three tables, so their content was simply never cropped.
+detector's one known gap: page 8 carries three tables (4, 5, 6) under two
+boxes, and table 5 — the one left without its own box — is the only table whose
+crop recovers nothing.
 
 Remaining experiments, in order of leverage:
 
@@ -447,7 +441,7 @@ never extracted cannot be retrieved, so parse-then-embed inherits the
 detection loss. Visual retrieval sidesteps parsing entirely — the pages the
 transcription pipeline is blind to are exactly the ones it still finds.
 
-Caveats stated plainly: one document, eight queries, and label-derived
+Caveats stated plainly: one document, seven queries, and label-derived
 queries are the friendly case for lexical-on-pixels matching (a paraphrased
 user question would be harder). This is a capability unlock demonstrated,
 not a benchmark; the next step is paraphrased queries and a second document.
@@ -456,12 +450,11 @@ not a benchmark; the next step is paraphrased queries and a second document.
 
 The pipeline works as a transcriber and fails as a detector — and the fix is
 now measured, not merely indicated. Against LaTeX ground truth the
-single-prompt VLM pass recovers 1 of the paper's 6 gradeable tables (17%) and types 1 of 19
+single-prompt VLM pass recovers 2 of the paper's 7 tables (29%) and types 1 of 19
 pages as containing one; a dedicated hosted detector finds **all four**
 table-bearing pages with zero confident false positives, for one cheap CV call
 per page. Of what the VLM transcribes, it invents nothing (grid precision
-1.000 on both matched tables), reproduces one table exactly — values and
-structure — and reads the other only partially. What remains open is the
+1.000 on the matched tables) and reproduces both matched tables exactly. What remains open is the
 second half of the routed architecture: transcribing from the detector's
 crops rather than the whole page.
 

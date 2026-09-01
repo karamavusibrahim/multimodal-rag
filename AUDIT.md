@@ -94,9 +94,10 @@ Limitations section.
 
 ## Left as-is, deliberately
 
-- **`12,914` tokenises as `12` and `914`.** Pre-existing, and it applies
-  symmetrically to gold and prediction, so it does not bias recall in a known
-  direction. Changing number tokenisation would invalidate every published
+- **`12,914` tokenises as `12` and `914`.** Pre-existing. Symmetric, but not
+  neutral, as the review showed: a prediction of `12,999` scores 0.5 against a
+  gold `12,914` instead of 0, so splitting inflates partial matches and
+  double-weights the cell. Changing number tokenisation would invalidate every published
   metric at once, which is not a change to make in an audit that cannot re-run
   them.
 - **Every denominator here is 7 tables or 19 pages from one paper.** Noted in
@@ -290,3 +291,31 @@ arm is not, and stays marked fixed-vintage.
   near-identical values; `detection.py` still hardcodes the RAG paper's pages;
   `pages.py` still indexes truncated non-JSON model output verbatim.
 - `detection.json` still predates its producer's schema.
+
+
+---
+
+## Fifth pass
+
+- **`min_numbers` now defaults to `MIN_MATCH_OVERLAP` (3).** The match gate
+  accepts a table on three overlapping numbers while grading refused tables
+  with three numbers — incoherent thresholds, and the incoherence excluded the
+  examples table, whose three visible values ("divided into 3 parts", "14th
+  century") both reads recover perfectly. Regenerated: coverage **2/7 (29%)**,
+  both matched tables at recall 1.000, whole-page mean 0.286 → crop 0.841,
+  6/7 tables with a correct number under crops.
+- **`min_numbers=0` now lists computed-macro tables**, so the "rendered" count
+  is a rendered count.
+- **Season labels keep their year** (`Spring-2024`); `BERT-2020`/`ISO-2022`
+  are now pinned by tests, which the review noted they were not.
+- **`grid_numbers` is now exercised by a test** rather than the tautological
+  `numbers_in(text) == numbers_in(text)`.
+- **Truncated JSON is no longer indexed as page text** — a reply cut off at
+  `{"elements":[` is scaffolding, and the prose fallback now refuses anything
+  opening with `{` or `[`.
+- REPORT's staleness note (retired: the artifacts it warned about are now
+  regenerated), its pre-regeneration narrative (partial read of table 4,
+  precision 0.634, "tables 4 and 8"), the eight-queries caveat, and the
+  structure result's "table 1" label are all synced to the regenerated truth.
+- The earlier claim here that `12,914` splitting "does not bias recall in a
+  known direction" was wrong and is corrected above: symmetric is not neutral.

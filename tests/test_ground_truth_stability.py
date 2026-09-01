@@ -101,19 +101,47 @@ class TestTableIdentity:
             "caption would now be read off the wrong row"
         )
 
+    def test_min_numbers_zero_lists_computed_macro_tables_too(self):
+        # "Rendered" means rendered: a table whose values are computed at
+        # typeset time is still a table in the document, and the listing mode
+        # used for the rendered count must include it or the count undercounts.
+        blob = self._archive([r" \pgfmathprintnumber{5} & 1 & 2 & 3 & 4 ",
+                              " 10 & 11 & 12 & 13 "])
+        assert [t.index for t in extract_source_tables(blob, min_numbers=0)] \
+            == [1, 2]
+
     def test_no_filtering_yields_contiguous_indices(self):
         blob = self._archive([" 1 & 2 & 3 & 4 ", " 5 & 6 & 7 & 8 "])
         assert [t.index for t in extract_source_tables(blob, min_numbers=4)] == [1, 2]
 
 
 class TestSymmetry:
-    def test_gold_and_prediction_tokenise_identically(self):
+    def test_identifier_digits_are_absent_from_any_tokenisation(self):
         # The asymmetry bug: `T5-11B & 44.5` gave gold ["44.5"] and prediction
         # ["11", "44.5"], so a perfect transcription scored precision 0.5.
-        for text in ("T5-11B & 44.5", r"\multirow[t]{2}{*}{M} & 1 & 4",
-                     "Total 12,914 & 8,701"):
-            assert numbers_in(text) == numbers_in(text)
-            assert "11" not in numbers_in("T5-11B & 44.5")
+        assert numbers_in("T5-11B & 44.5") == ["44.5"]
+
+    def test_grid_scoring_uses_the_same_cleaning(self):
+        # grid_numbers tokenised raw while gold was cleaned, so a perfect
+        # "T5-11B | 44.5" grid scored precision 0.5 -- and the earlier version
+        # of this class only asserted numbers_in(text) == numbers_in(text),
+        # which cannot fail. This drives the actual grid path.
+        from table_accuracy import grid_numbers
+
+        grid = grid_numbers("| Model | score |\n| T5-11B | 44.5 |")
+        assert grid is not None
+        assert "11" not in grid
+        assert "44.5" in grid
+
+    def test_names_with_year_shaped_digits_stay_out(self):
+        # The year exception must not readmit names: BERT-2020 and ISO-2022
+        # regressed once because no test pinned them.
+        assert numbers_in("BERT-2020 & 88.5") == ["88.5"]
+        assert numbers_in("ISO-2022 & 4") == ["4"]
+
+    def test_season_periods_keep_their_year(self):
+        assert numbers_in("Spring-2024 & 7") == ["2024", "7"]
+        assert numbers_in("Winter-2019") == ["2019"]
 
 
 class TestPeriodLabels:
