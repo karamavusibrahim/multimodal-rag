@@ -144,10 +144,13 @@ def extract_page(png: bytes, *, model: str = VLM_MODEL) -> list[dict[str, str]]:
         # A page the parser cannot structure is still worth indexing as text --
         # dropping it would silently create a hole in the corpus. Unless the
         # reply *is* a broken structure: a truncated '{"elements":[' is JSON
-        # scaffolding, not page content, and indexing it verbatim puts
-        # punctuation soup into the corpus wearing a page number.
+        # scaffolding, not page content. The first character alone cannot make
+        # that call -- "[Draft] This page..." is real prose -- so scaffolding
+        # means bracket-leading AND essentially wordless.
         text = raw.strip()
-        if not text or text[0] in "{[":
+        if not text:
+            return []
+        if text[0] in "{[" and len(re.findall(r"[A-Za-z]{2,}", text[:200])) < 3:
             return []
         return [{"kind": "text", "content": text}]
 

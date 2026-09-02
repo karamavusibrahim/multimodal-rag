@@ -319,3 +319,33 @@ arm is not, and stays marked fixed-vintage.
   structure result's "table 1" label are all synced to the regenerated truth.
 - The earlier claim here that `12,914` splitting "does not bias recall in a
   known direction" was wrong and is corrected above: symmetric is not neutral.
+
+
+---
+
+## Sixth pass
+
+- **The malformed-JSON guard is structural now.** First-character testing
+  discarded real prose that happened to open with a bracket ("[Draft] This
+  page..."). Scaffolding now means bracket-leading *and* essentially wordless.
+  Pinned both ways.
+- **The threshold alignment has its regression test.** Mutating the
+  `min_numbers` default back to 4 had left every test green; a test now pins
+  the default to `MIN_MATCH_OVERLAP` and asserts the paper grades all seven
+  tables under it.
+- **Docs synced to the regeneration, again.** The vintage note claimed
+  "committed inputs" (the archive is cached, not committed) and said the
+  direction was down (this regeneration moved numbers up, legitimately); the
+  per-table narrative still said one table cleared 0.35, table 3 was
+  ungradeable, and four crops reached 0.9. All now match the artifacts:
+  two perfect page reads, table 3 back in the denominator, five crops ≥0.9.
+- **Left as designed:** the period-label whitelist. The review calls it
+  brittle, which is true — it is also explicit, tested, and fails toward
+  keeping data (an unlisted period word loses only its year). A learned or
+  heuristic alternative would fail silently in both directions.
+
+Still open: the visual-retrieval arm (query vectors never committed),
+`\input used` unbraced form, partial page maps disabling unmapped tables,
+one-to-many matching, box renumbering after filtering, `%g` normalisation
+collisions, hardcoded detection pages, and `detection.json` predating its
+producer.

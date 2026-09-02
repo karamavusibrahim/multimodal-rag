@@ -66,3 +66,11 @@ def test_truncated_json_is_not_indexed_as_content():
     # A reply cut off mid-structure is scaffolding, not page text.
     assert run('{"elements":[') == []
     assert run('[{"kind": "te') == []
+
+
+def test_prose_that_happens_to_start_with_a_bracket_is_kept():
+    # The scaffolding test must be structural, not first-character: "[Draft]"
+    # leading real prose is page content.
+    out = run("[Draft] This page contains useful prose about retrieval.")
+    assert out == [{"kind": "text",
+                    "content": "[Draft] This page contains useful prose about retrieval."}]

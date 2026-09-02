@@ -173,6 +173,27 @@ class TestAgainstTheRealPaper:
         allt = extract_source_tables(blob, min_numbers=0)
         assert [t.index for t in allt] == [1, 2, 3, 4, 5, 6, 7]
 
+    def test_the_default_threshold_grades_all_seven(self):
+        """The grading cutoff must not be stricter than the match gate.
+
+        min_numbers defaulted to 4 while MIN_MATCH_OVERLAP accepted a table on
+        3 overlapping numbers -- incoherent thresholds that silently excluded
+        the examples table, whose three values both reads recover. A mutation
+        back to 4 left every test passing, because nothing exercised the
+        default against the paper. This does.
+        """
+        import inspect
+
+        from table_accuracy import MIN_MATCH_OVERLAP, extract_source_tables as e
+
+        sig = inspect.signature(e)
+        assert sig.parameters["min_numbers"].default == MIN_MATCH_OVERLAP
+        blob = CACHED_SOURCE.read_bytes()
+        assert [t.index for t in e(blob)] == [1, 2, 3, 4, 5, 6, 7], (
+            "the default threshold must grade every rendered table of this "
+            "paper, including the 3-number examples table"
+        )
+
     def test_filtering_leaves_a_gap_rather_than_renumbering(self):
         blob = CACHED_SOURCE.read_bytes()
         graded = extract_source_tables(blob, min_numbers=4)

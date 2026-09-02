@@ -115,13 +115,16 @@ uv run python eval/table_accuracy.py --arxiv-id 2005.11401
 
 Measured on the full 19-page RAG paper (Lewis et al., 2020):
 
-> **Regenerated 2026-09-01 from committed code and committed inputs.** The
-> extraction elements are tracked and the transcripts are stored in the crop
-> artifact, so both tables below are now produced by the code in this repo,
-> offline — the drift between published numbers and executable code that three
-> audit passes kept finding is closed for these two artifacts. Numbers moved
-> again in the process, and the honest direction was down: the second
-> "matched" table had only ever been matching its own layout digits.
+> **Regenerated from committed code (2026-09-02).** The extraction elements
+> are tracked and the transcripts are stored in the crop artifact, so both
+> tables below are produced offline by the code in this repo — the drift
+> between published numbers and executable code that earlier audit passes kept
+> finding is closed for these two artifacts. (The arXiv source archive itself
+> is still fetched, not committed, so "offline" assumes the cached download.)
+> The numbers have moved in both directions across regenerations: down when
+> layout-digit matches were removed, up when the grading threshold was aligned
+> with the match gate and the examples table — three genuine values, read
+> perfectly — entered the denominator.
 
 ```
 source tables rendered:      7      (all 7 numerically gradeable)
@@ -143,7 +146,7 @@ was noise the cleaned ground truth no longer counts: the `0.333` was the
 qualitative examples table matching its own `\multirow` layout digits, and the
 small values were identifier digits shared with prose.
 
-No table cleared 0.35 except the one read essentially perfectly; the tail is
+No table cleared 0.35 except the two read perfectly; the tail is
 coincidental digit overlap with prose paragraphs, not degraded reads. (An
 earlier version of this list read `1.000 0.333 | 0.200 0.200 0.130 0.111 0.085
 0.049` across 8 tables. Two corrections since — matching is now constrained to

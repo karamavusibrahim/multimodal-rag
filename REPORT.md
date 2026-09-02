@@ -83,13 +83,16 @@ limitation of the whole evaluation (§5).
 
 ### 2.1 Content
 
-> **Regenerated 2026-09-01 from committed code and committed inputs.** The
-> extraction elements are tracked and the transcripts are stored in the crop
-> artifact, so both tables below are now produced by the code in this repo,
-> offline — the drift between published numbers and executable code that three
-> audit passes kept finding is closed for these two artifacts. Numbers moved
-> again in the process, and the honest direction was down: the second
-> "matched" table had only ever been matching its own layout digits.
+> **Regenerated from committed code (2026-09-02).** The extraction elements
+> are tracked and the transcripts are stored in the crop artifact, so both
+> tables below are produced offline by the code in this repo — the drift
+> between published numbers and executable code that earlier audit passes kept
+> finding is closed for these two artifacts. (The arXiv source archive itself
+> is still fetched, not committed, so "offline" assumes the cached download.)
+> The numbers have moved in both directions across regenerations: down when
+> layout-digit matches were removed, up when the grading threshold was aligned
+> with the match gate and the examples table — three genuine values, read
+> perfectly — entered the denominator.
 
 ```
 source tables rendered:      7      (all 7 numerically gradeable)
@@ -134,7 +137,7 @@ An earlier version of this report printed only 6 of these values and called the
 distribution "bimodal, with nothing in the middle". That was a curated list: the
 two omitted 0.200s sit exactly in the claimed-empty middle (they fell below the
 match threshold on overlap, not recall). The honest description is weaker but
-still decisive: **no table cleared 0.35 except the one read essentially
+still decisive: **no table cleared 0.35 except the two read essentially
 perfectly, and most sit at coincidental-digit-overlap level.** The four lowest
 scores are not degraded reads — they are chance overlap between a source table
 and an unrelated prose paragraph.
@@ -375,14 +378,16 @@ dedicated table transcription, scored against the same LaTeX ground truth:
 | 7 | 1.000 | 1.000 |
 | **mean** | **0.286** | **0.841** |
 
-(Rescored 2026-09-01 from the saved transcripts — `--reuse-results`, no API
-calls — against the cleaned ground truth; the qualitative table 3 is no longer
-gradeable, and table 5's former 0.100 was an identifier digit.)
+(Rescored 2026-09-02 from the saved transcripts — `--reuse-results`, no API
+calls — against the cleaned ground truth. Table 5's former 0.100 was an
+identifier digit. Table 3, briefly excluded when its layout digits were
+cleaned away, is back in the denominator: its three remaining values are
+genuine, and the grading threshold now matches the match gate's own minimum.)
 
 Tables with at least one correctly transcribed number: **2/7 → 6/7.** Cost: one
 VLM call per detected box.
 
-The same model that read 1 table off whole pages reads 4 tables at ≥0.9 recall
+The same model that read 2 tables off whole pages reads 5 tables at ≥0.9 recall
 when handed crops: the limiting factor was never transcription ability, it was
 **attention allocation on a full page** — which is what §2.3 hypothesized and
 the detection pass (§6) made fixable. The residual misses line up with the
