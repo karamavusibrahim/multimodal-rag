@@ -74,3 +74,17 @@ def test_prose_that_happens_to_start_with_a_bracket_is_kept():
     out = run("[Draft] This page contains useful prose about retrieval.")
     assert out == [{"kind": "text",
                     "content": "[Draft] This page contains useful prose about retrieval."}]
+
+
+def test_long_truncated_json_with_wordy_content_is_still_scaffolding():
+    # Word counting admitted this; the '":' key signature does not.
+    out = run('{"elements":[{"kind":"text","content":"This page contains '
+              'useful prose about retrieval and generation')
+    assert out == []
+
+
+def test_a_parseable_prefix_does_not_swallow_the_page():
+    # "[1] ..." parses as the JSON list [1]; every element is discarded and
+    # the page used to vanish. The salvage path keeps the prose.
+    out = run("[1] A citation-style opening with real prose following it.")
+    assert len(out) == 1 and out[0]["kind"] == "text"

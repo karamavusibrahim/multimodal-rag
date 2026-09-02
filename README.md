@@ -210,8 +210,7 @@ because "row agreement 0.9" is unfalsifiable otherwise; it could just as easily
 be measuring row-*count* similarity and nobody would notice.
 
 ```
-$ uv run pytest tests/ -q
-51 passed
+$ uv run pytest tests/ -q   # every test passes; the count grows with each audit pass
 ```
 
 Measured on the one gradeable table:

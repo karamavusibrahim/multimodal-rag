@@ -133,6 +133,27 @@ Return ONLY JSON:
 {"elements": [{"kind": "text", "content": "..."}]}"""
 
 
+def _prose_fallback(raw: str) -> list[dict[str, str]]:
+    """Index unstructurable output as prose -- if it actually is prose.
+
+    Recognition is structural, and each earlier heuristic failed one way:
+    first-character testing discarded prose that opens with a bracket
+    ("[Draft] This page..."), and word-counting admitted a long truncated
+    reply whose *content field* was wordy. A bracket-leading reply containing
+    the JSON key signature '":' is a broken container whatever prose its
+    fields carry, because intact JSON would have parsed. Anything essentially
+    wordless is not page content either.
+    """
+    text = raw.strip()
+    if not text:
+        return []
+    if text[0] in "{[" and re.search(r'"\s*:', text):
+        return []
+    if len(re.findall(r"[A-Za-z]{2,}", text[:400])) < 3:
+        return []
+    return [{"kind": "text", "content": text}]
+
+
 def extract_page(png: bytes, *, model: str = VLM_MODEL) -> list[dict[str, str]]:
     """Extract structured elements from one rendered page."""
     raw = chat(model, _vision_message(png, EXTRACT_PROMPT),
@@ -143,16 +164,14 @@ def extract_page(png: bytes, *, model: str = VLM_MODEL) -> list[dict[str, str]]:
     except Exception:
         # A page the parser cannot structure is still worth indexing as text --
         # dropping it would silently create a hole in the corpus. Unless the
-        # reply *is* a broken structure: a truncated '{"elements":[' is JSON
-        # scaffolding, not page content. The first character alone cannot make
-        # that call -- "[Draft] This page..." is real prose -- so scaffolding
-        # means bracket-leading AND essentially wordless.
-        text = raw.strip()
-        if not text:
-            return []
-        if text[0] in "{[" and len(re.findall(r"[A-Za-z]{2,}", text[:200])) < 3:
-            return []
-        return [{"kind": "text", "content": text}]
+        # reply *is* a broken structure. Recognition is structural, and both
+        # earlier heuristics failed one way each: first-character testing
+        # discarded prose that opens with a bracket ("[Draft] This page..."),
+        # and word-counting admitted a long truncated reply whose *content
+        # field* was wordy. What separates them is the JSON key signature: a
+        # bracket-leading reply containing '":' is a broken container whatever
+        # prose its fields carry, because intact JSON would have parsed above.
+        return _prose_fallback(raw)
 
     # Models return either {"elements": [...]} as asked, or a bare [...] list.
     # Both are unambiguous, so accept both rather than discarding good output.
@@ -191,6 +210,14 @@ def extract_page(png: bytes, *, model: str = VLM_MODEL) -> list[dict[str, str]]:
             out.append({"kind": kind if kind in
                         ("text", "table", "chart", "figure") else "text",
                         "content": content})
+    if not out:
+        # The parse "succeeded" but yielded nothing usable -- e.g. a reply
+        # opening with "[1] ..." parses as the JSON list [1], every element is
+        # discarded, and the page silently vanished. An empty result from a
+        # non-empty reply is a parse failure in effect, so it gets the same
+        # prose salvage as an explicit one. (A genuine {"elements": []} reply
+        # is caught there as a JSON container and still returns [].)
+        return _prose_fallback(raw)
     return out
 
 

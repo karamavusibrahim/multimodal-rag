@@ -349,3 +349,22 @@ Still open: the visual-retrieval arm (query vectors never committed),
 one-to-many matching, box renumbering after filtering, `%g` normalisation
 collisions, hardcoded detection pages, and `detection.json` predating its
 producer.
+
+
+---
+
+## Seventh pass
+
+- **Scaffolding detection is structural.** Word counting admitted a long
+  truncated reply whose content field was wordy; the JSON key signature
+  ('":' in a bracket-leading reply) does not, since intact JSON would have
+  parsed. And a reply opening with a parseable fragment ("[1] ...") parsed as
+  the list [1], discarded every element, and silently dropped the page — an
+  empty result from a non-empty reply now takes the same prose salvage as an
+  explicit parse failure. Both directions pinned, short and long.
+- **The threshold-coherence check runs in a clean checkout.** Its first
+  version sat under the cached-archive skip, so reverting the default left
+  clean CI green — the same skip blind spot as the round-4 crash test, caught
+  by the same reviewer trick (mutate, run, watch it stay green).
+- **README no longer publishes a literal test count.** It went stale three
+  passes running (45 → 51 → 53); the suite is the source of truth.

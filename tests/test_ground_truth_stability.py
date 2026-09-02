@@ -71,6 +71,39 @@ class TestLayoutMacros:
         assert clean(r"\multicolumn{2}{c}{Results} & 12.3") == ["12.3"]
 
 
+class TestThresholdCoherence:
+    """The grading cutoff must not be stricter than the match gate.
+
+    min_numbers defaulted to 4 while MIN_MATCH_OVERLAP accepted a table on 3
+    overlapping numbers -- incoherent thresholds that silently excluded a
+    gradeable table. This check runs in a clean checkout (no archive needed),
+    because the first version sat under the cached-archive skip and a mutation
+    back to 4 left clean CI green.
+    """
+
+    def test_default_equals_the_match_overlap_gate(self):
+        import inspect
+
+        from table_accuracy import MIN_MATCH_OVERLAP, extract_source_tables
+
+        sig = inspect.signature(extract_source_tables)
+        assert sig.parameters["min_numbers"].default == MIN_MATCH_OVERLAP
+
+    def test_a_three_number_table_grades_by_default(self):
+        import io
+        import tarfile
+
+        tex = r"\begin{tabular}{lr} 1 & 2 & 3 \end{tabular}"
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            data = tex.encode()
+            info = tarfile.TarInfo("main.tex")
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+        got = extract_source_tables(buf.getvalue())
+        assert [t.index for t in got] == [1]
+
+
 class TestTableIdentity:
     """Filtering a table must not renumber the ones after it."""
 
@@ -174,22 +207,10 @@ class TestAgainstTheRealPaper:
         assert [t.index for t in allt] == [1, 2, 3, 4, 5, 6, 7]
 
     def test_the_default_threshold_grades_all_seven(self):
-        """The grading cutoff must not be stricter than the match gate.
-
-        min_numbers defaulted to 4 while MIN_MATCH_OVERLAP accepted a table on
-        3 overlapping numbers -- incoherent thresholds that silently excluded
-        the examples table, whose three values both reads recover. A mutation
-        back to 4 left every test passing, because nothing exercised the
-        default against the paper. This does.
-        """
-        import inspect
-
-        from table_accuracy import MIN_MATCH_OVERLAP, extract_source_tables as e
-
-        sig = inspect.signature(e)
-        assert sig.parameters["min_numbers"].default == MIN_MATCH_OVERLAP
+        """Against the real paper: every rendered table grades by default."""
         blob = CACHED_SOURCE.read_bytes()
-        assert [t.index for t in e(blob)] == [1, 2, 3, 4, 5, 6, 7], (
+        assert [t.index for t in extract_source_tables(blob)] == \
+            [1, 2, 3, 4, 5, 6, 7], (
             "the default threshold must grade every rendered table of this "
             "paper, including the 3-number examples table"
         )
