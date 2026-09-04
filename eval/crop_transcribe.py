@@ -36,6 +36,7 @@ from table_accuracy import (  # noqa: E402
     fetch_source,
     load_page_ground_truth,
     numbers_in,
+    page_scope,
     score,
 )
 
@@ -91,14 +92,18 @@ def main() -> int:
         boxes_by_page: dict[int, list[dict[str, float]]] = {}
         for row in det["per_page"]:
             tables = (row.get("boxes") or {}).get("table") or []
-            selected = [b for b in tables
+            # Keep the detector's own box index with each selected box. The
+            # index used to be assigned *after* filtering, so with boxes
+            # [0.1, 0.9] the surviving original box 1 was recorded as box 0
+            # and the transcript could not be traced back to its detection.
+            selected = [(i, b) for i, b in enumerate(tables)
                         if b.get("confidence", 0.0) >= args.min_confidence]
             if selected:
                 boxes_by_page[row["page"]] = selected
 
         transcripts: list[dict[str, Any]] = []
         for page_no, png in render_pages(args.pdf):
-            for i, box in enumerate(boxes_by_page.get(page_no, [])):
+            for i, box in boxes_by_page.get(page_no, []):
                 print(f"transcribing page {page_no} box {i} "
                       f"(conf {box.get('confidence', 0):.3f}) ...")
                 text = chat(VLM_MODEL, _vision_message(crop(png, box), CROP_PROMPT),
@@ -113,8 +118,7 @@ def main() -> int:
     rows = []
     for st in source_tables:
         best = {"recall": 0.0, "precision": 0.0, "overlap": 0, "page": None}
-        eligible = [t for t in transcripts
-                    if not gold_pages or t["page"] == gold_pages.get(st.index)]
+        eligible, scoped = page_scope(gold_pages, st.index, transcripts)
         for t in eligible:
             r, p, o = score(st.numbers, numbers_in(t["text"]))
             if o > best["overlap"]:
@@ -122,6 +126,7 @@ def main() -> int:
                         "page": t["page"], "box": t["box"]}
         base = baseline.get(st.index, {})
         rows.append({"table": st.index, "gold_page": gold_pages.get(st.index),
+                     "page_scoped": scoped,
                      "n_numbers": len(st.numbers), **best,
                      "baseline_recall": base.get("recall"),
                      "baseline_kind": base.get("kind")})

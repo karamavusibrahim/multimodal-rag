@@ -74,6 +74,29 @@ def rank_of(gold_page: int, ranked_pages: list[int]) -> int:
     return ranked_pages.index(gold_page) + 1 if gold_page in ranked_pages else 0
 
 
+def mrr_bounds(ranks: list[int | None], *, n_pages: int,
+               known_beyond: int = 3) -> tuple[float, float]:
+    """MRR bounds when some ranks are known only as "worse than the top-k".
+
+    Every page is in the ranking, so an unknown rank lies in
+    [known_beyond + 1, n_pages] and contributes between 1/n_pages and
+    1/(known_beyond + 1). This is how the committed artifact's text-arm MRR
+    interval (0.383-0.411) was derived after the table-5 page correction:
+    six known ranks and one rank known only to exceed the saved top-3, over
+    19 pages. A reviewer who ignored the page count and set the unknown
+    contribution to zero got 0.375 and called the bounds wrong; the function
+    exists so the derivation is code, not prose.
+    """
+    if n_pages < known_beyond + 1:
+        raise ValueError("n_pages must exceed the known top-k")
+    known = sum(1.0 / r for r in ranks if r)
+    unknown = sum(1 for r in ranks if not r)
+    n = len(ranks)
+    lo = (known + unknown / n_pages) / n
+    hi = (known + unknown / (known_beyond + 1)) / n
+    return round(lo, 3), round(hi, 3)
+
+
 def main() -> int:
     load_dotenv(Path(__file__).resolve().parents[1] / ".env")
     ap = argparse.ArgumentParser()

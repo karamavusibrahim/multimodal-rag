@@ -103,7 +103,7 @@ mean precision               0.816   (whole element, incl. surrounding prose)
 grid precision               1.000   (grid region only)
 ```
 
-Per-table recall over the 6 gradeable tables:
+Per-table recall over the 7 gradeable tables:
 
 ```
 1.000   1.000   |   0.000   0.000   0.000   0.000   0.000
@@ -228,7 +228,9 @@ and ≥20% recall before calling a table found.
 `\cmidrule(lr){2-3}` are formatting directives; their arguments were entering the
 ground-truth number set. Table 7 counted 81 "numbers" of which roughly 21 were
 column spans — deflating recall for a reason unrelated to reading the page.
-After stripping, it has 59.
+After stripping it had 59; under the current rules (identifier digits and
+layout macros removed, table 3 restored so this table is now numbered 6) it
+has 54, which is what `eval/results/table_accuracy.json` records.
 
 **3. Column specifications leaked widths.** `p{0.3\textwidth}` contributed `0.3`
 as a table value.
@@ -451,6 +453,35 @@ queries are the friendly case for lexical-on-pixels matching (a paraphrased
 user question would be harder). This is a capability unlock demonstrated,
 not a benchmark; the next step is paraphrased queries and a second document.
 
+### 6.3 Optional and unmeasured: late-interaction (MaxSim) scoring
+
+§6.2 embeds each page as one vector. Page 8 of this paper holds three
+tables; one vector stands for all of them, and the visual arm's one miss at
+rank 1 (table 5, on that page) is the shape of failure that motivates
+multi-vector retrieval. ColPali (Faysse et al., arXiv 2407.01449) and
+ColQwen2 / ColQwen2.5 keep one embedding per image patch and score a query
+by summing, over its tokens, the best patch similarity — ColBERT's MaxSim
+applied to page images — so a table header or a figure label can match the
+patch that carries it.
+
+`src/mm_rag/retrieve/late_interaction.py` implements the scoring, page
+ranking, and the paper's training-free token pooling (mean of neighbouring
+patch vectors, dividing storage by the pool factor at some cost in score
+fidelity), in numpy, with tests on synthetic vectors — including the one
+that states the point: a query about one of two tables on a page scores
+1.0 under MaxSim and under 0.8 against the page's mean vector.
+`eval/late_interaction_retrieval.py` takes patch embeddings from any
+encoder as plain arrays and scores them against the same page-level gold
+as §6.2, with and without pooling, next to the committed single-vector
+numbers.
+
+What is not here, stated plainly: a model. The hosted endpoint returns one
+vector per input and no multi-vector page encoder was hosted when this was
+written, so no patch embeddings are committed and no retrieval number is
+claimed. The ViDoRe leaderboard is where these models are compared; this
+repository measures nothing about them until someone runs an encoder and
+hands the script its arrays.
+
 ## 7. Conclusion
 
 The pipeline works as a transcriber and fails as a detector — and the fix is
@@ -459,9 +490,11 @@ single-prompt VLM pass recovers 2 of the paper's 7 tables (29%) and types 1 of 1
 pages as containing one; a dedicated hosted detector finds **all four**
 table-bearing pages with zero confident false positives, for one cheap CV call
 per page. Of what the VLM transcribes, it invents nothing (grid precision
-1.000 on the matched tables) and reproduces both matched tables exactly. What remains open is the
-second half of the routed architecture: transcribing from the detector's
-crops rather than the whole page.
+1.000 on the matched tables) and reproduces both matched tables exactly. The
+second half of the routed architecture — transcribing from the detector's
+crops rather than the whole page — has since been run and scored (§6.1):
+crop transcription lifts mean recall from 0.286 to 0.841 over the seven
+tables, with table 5 the remaining gap.
 
 The practically useful finding is that these are two different problems that were
 being solved by one prompt. The fix indicated by the data is a dedicated

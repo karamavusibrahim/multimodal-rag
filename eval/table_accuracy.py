@@ -98,7 +98,9 @@ _PERIOD_SEGMENT = re.compile(
     r"^(?:[QH][1-4]|FY|fiscal|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|"
     r"Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|"
     r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|"
-    r"Spring|Summer|Fall|Autumn|Winter)$", re.I)
+    r"Spring|Summer|Fall|Autumn|Winter|"
+    # Calendar units and their abbreviations: Week-2024, Wk-2024, Month-2024.
+    r"Week|Wk|W\d{1,2}|Month|Mo|Quarter|Half|Year|Yr|Day)$", re.I)
 
 
 def _strip_identifier(m: re.Match[str]) -> str:
@@ -133,7 +135,11 @@ _MACRO_COMPUTED = re.compile(r"\\(pgfmathprintnumber|csname|the[a-z]+)")
 # Leading column spec, allowing one level of nesting for p{...}/m{...} widths,
 # and an optional [t]/[b] placement argument before it.
 _COLSPEC_RE = re.compile(r"^(?:\[[^\]]*\])?\{(?:[^{}]|\{[^{}]*\})*\}")
-_INPUT_RE = re.compile(r"\\(?:input|include)\s*\{([^}]+)\}")
+# Both forms TeX accepts: `\input{file}` and the unbraced `\input file`. The
+# braced-only pattern silently skipped every table in a file pulled in with
+# the unbraced form -- which is legal, common in older sources, and produced
+# no error, just fewer tables.
+_INPUT_RE = re.compile(r"\\(?:input|include)\s*(?:\{([^}]+)\}|([^\s{}\\%]+))")
 
 # Thresholds for calling a source table "found" in the extraction. Below these
 # an apparent match is coincidental digit overlap rather than the table.
@@ -197,7 +203,7 @@ def tex_files(blob: bytes) -> Iterable[str]:
                 parent = Path(name).parent
 
                 def replace(match: re.Match[str]) -> str:
-                    child = str(parent / match.group(1))
+                    child = str(parent / (match.group(1) or match.group(2)))
                     if not child.lower().endswith(".tex"):
                         child += ".tex"
                     return expand(child, stack + (name,))
@@ -221,12 +227,36 @@ def load_page_ground_truth(arxiv_id: str, path: Path | None = None) -> dict[int,
 
 
 def normalize_number(tok: str) -> str:
-    """Compare on value, not formatting: 12.30 == 12.3, -0 == 0."""
+    """Compare on value, not formatting: 12.30 == 12.3, -0 == 0.
+
+    `%g` alone rounds to six significant digits, so 1234567 and 1234568 both
+    became "1.23457e+06" and a transcription that got a seven-digit figure
+    wrong by one scored as correct. Fifteen significant digits keeps every
+    number a table can print distinct while still collapsing formatting.
+    """
     try:
         f = float(tok)
     except ValueError:
         return tok
-    return f"{f:g}"
+    if f == 0:
+        f = 0.0  # fold "-0" into "0"
+    return f"{f:.15g}"
+
+
+def page_scope(gold_pages: dict[int, int], table_index: int,
+               items: list, *, key: str = "page") -> tuple[list, bool]:
+    """Candidates eligible to match `table_index`, and whether they were
+    restricted to its gold page.
+
+    With a page map, a table absent from the map used to get *no* eligible
+    candidates -- `.get()` returned None and nothing has page None -- so a
+    partial map silently zeroed every unmapped table. An unmapped table is
+    now matched anywhere, and the row records that it was not page-scoped.
+    """
+    page = gold_pages.get(table_index) if gold_pages else None
+    if page is None:
+        return list(items), False
+    return [it for it in items if it.get(key) == page], True
 
 
 def extract_source_tables(blob: bytes,
@@ -367,8 +397,7 @@ def main() -> int:
     for st in source_tables:
         best = {"recall": 0.0, "precision": 0.0, "overlap": 0, "element_id": None}
         best_el = None
-        eligible = [el for el in candidates
-                    if not gold_pages or el.get("page") == gold_pages.get(st.index)]
+        eligible, scoped = page_scope(gold_pages, st.index, candidates)
         for el in eligible:
             r, p, o = score(st.numbers, numbers_in(el["content"]))
             if o > best["overlap"]:
@@ -385,6 +414,7 @@ def main() -> int:
                 _, pg, _ = score(st.numbers, gnums)
                 best["precision_grid"] = pg
         rows.append({"table": st.index, "gold_page": gold_pages.get(st.index),
+                     "page_scoped": scoped,
                      "n_numbers": len(st.numbers), **best})
 
     # A single coincidental digit is not a match. Two tables in the first run

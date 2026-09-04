@@ -133,23 +133,34 @@ Return ONLY JSON:
 {"elements": [{"kind": "text", "content": "..."}]}"""
 
 
+# A broken JSON container, recognised by its shape rather than its words: a
+# quoted key immediately after the opening bracket(s) -- `{'elements': [`,
+# `[{"kind":` -- or an object-with-key anywhere near the start. Prose that
+# merely contains a quoted label and a colon ('[Definition] "Precision": the
+# fraction ...') has neither, because its bracket encloses a word, not a key.
+_JSON_SCAFFOLD = re.compile(
+    r"""^\s*[\[{]\s*(?:[\[{]\s*)?["']\w+["']\s*:|\{\s*["']\w+["']\s*:""")
+
+
 def _prose_fallback(raw: str) -> list[dict[str, str]]:
     """Index unstructurable output as prose -- if it actually is prose.
 
     Recognition is structural, and each earlier heuristic failed one way:
     first-character testing discarded prose that opens with a bracket
-    ("[Draft] This page..."), and word-counting admitted a long truncated
-    reply whose *content field* was wordy. A bracket-leading reply containing
-    the JSON key signature '":' is a broken container whatever prose its
-    fields carry, because intact JSON would have parsed. Anything essentially
-    wordless is not page content either.
+    ("[Draft] This page..."); word-counting admitted a long truncated reply
+    whose *content field* was wordy and rejected a short real one ("[Draft]
+    Results"); and the bare key signature '":' anywhere in a bracket-leading
+    reply rejected prose that quoted a label. What separates a broken
+    container from prose is where the quoted key sits: right after the
+    opening bracket, or inside an object. Anything with no word in it at all
+    is not page content either.
     """
     text = raw.strip()
     if not text:
         return []
-    if text[0] in "{[" and re.search(r'"\s*:', text):
+    if _JSON_SCAFFOLD.search(text[:300]):
         return []
-    if len(re.findall(r"[A-Za-z]{2,}", text[:400])) < 3:
+    if not re.search(r"[A-Za-z]{2,}", text[:400]):
         return []
     return [{"kind": "text", "content": text}]
 

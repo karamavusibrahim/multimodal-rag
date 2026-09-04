@@ -134,7 +134,7 @@ mean precision               0.816   (whole element, incl. surrounding prose)
 grid precision               1.000   (grid region only)
 ```
 
-**Coverage is the failure, not fidelity.** The per-table recalls over the 6
+**Coverage is the failure, not fidelity.** The per-table recalls over the 7
 gradeable tables:
 
 ```
@@ -291,24 +291,40 @@ the original entry preserved in the artifact under
 
 One document and label-derived queries, so a demonstrated unlock rather than a
 benchmark. For calibration, the published leaderboard for this class of model
-is ViDoRe (V1+V2, NDCG@5), where late-interaction systems currently sit in the
-mid-80s. That figure is context from published leaderboards, not something
-this repository can check offline, and it is measuring a different task on a
-different corpus — it is here to place the work, not to compare against. Details and caveats in REPORT §6.2.
+is ViDoRe (V1+V2, NDCG@5), where late-interaction systems (ColPali,
+[arXiv 2407.01449](https://arxiv.org/abs/2407.01449); ColQwen2.5) lead. No
+leaderboard figure is quoted here because this repository cannot check one
+offline, and the benchmark measures a different task on a different corpus —
+the reference is here to place the work, not to compare against. Details and caveats in REPORT §6.2.
+
+**Optional and unmeasured: late-interaction scoring.** The single-vector arm
+above has to represent a page holding three tables with one vector.
+ColPali-class retrieval keeps one embedding per image patch and scores a
+query token against its best patch (MaxSim). `src/mm_rag/retrieve/late_interaction.py`
+implements that scoring and the paper's training-free token pooling in
+numpy, tested offline on synthetic vectors, and
+`eval/late_interaction_retrieval.py` scores user-supplied patch embeddings
+against the same page-level gold as the visual arm. **No multi-vector page
+encoder is hosted on the endpoint this repository uses and no patch
+embeddings are committed**, so this is an integration point with a paper
+behind it and no number. REPORT §6.3.
 
 ## Layout
 
 ```
 src/mm_rag/
-  nvidia.py            NIM client: chat (incl. vision), embeddings, reranking
-  extract/pages.py     render, structured page read, prose fallback, verification
+  nvidia.py                    NIM client: chat (incl. vision), embeddings, reranking
+  extract/pages.py             render, structured page read, prose fallback, verification
+  retrieve/late_interaction.py optional: MaxSim scoring + token pooling (no model)
 eval/
-  table_accuracy.py    LaTeX-source ground truth, recall/precision per table
-  structure.py         alignment-free structure metric
-  detection.py         optional: hosted page-element detection pass
-  crop_transcribe.py   optional: dedicated VLM reads of detected table crops
+  table_accuracy.py            LaTeX-source ground truth, recall/precision per table
+  structure.py                 alignment-free structure metric
+  detection.py                 optional: hosted page-element detection pass
+  crop_transcribe.py           optional: dedicated VLM reads of detected table crops
+  visual_retrieval.py          optional: single-vector visual page retrieval arm
+  late_interaction_retrieval.py optional: scores user-supplied multi-vector pages
 scripts/
-  ingest.py            PDF -> elements -> embedded index
+  ingest.py                    PDF -> elements -> embedded index
 ```
 
 ## Relationship to the sibling projects
@@ -340,8 +356,9 @@ agentic reasoning over it → perception as the input to both.
 - Pages that come back unstructured still need the prose fallback, losing
   table/chart typing.
 - **There is no end-to-end query path in the library.** `src/mm_rag/` ships
-  rendering, page extraction and the NIM client; `retrieve/` is an empty
-  package and there is no `ask()`. Retrieval is measured in `eval/`, not
+  rendering, page extraction, the NIM client and a scorer; `retrieve/` holds
+  the optional late-interaction scorer and nothing that serves a query, and
+  there is no `ask()`. Retrieval is measured in `eval/`, not
   served. What this repo is, precisely: an instrumented perception-and-
   retrieval *measurement harness* for visually-rich pages. It does not let you
   ask a question yet. Reproducibility is now split: the table-accuracy and

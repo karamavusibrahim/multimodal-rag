@@ -8,6 +8,7 @@
     {
       "table": 1,
       "gold_page": 6,
+      "page_scoped": true,
       "n_numbers": 23,
       "recall": 1.0,
       "precision": 0.42592592592592593,
@@ -20,6 +21,7 @@
     {
       "table": 2,
       "gold_page": 6,
+      "page_scoped": true,
       "n_numbers": 20,
       "recall": 1.0,
       "precision": 0.37037037037037035,
@@ -32,6 +34,7 @@
     {
       "table": 3,
       "gold_page": 7,
+      "page_scoped": true,
       "n_numbers": 3,
       "recall": 1.0,
       "precision": 1.0,
@@ -44,6 +47,7 @@
     {
       "table": 4,
       "gold_page": 8,
+      "page_scoped": true,
       "n_numbers": 10,
       "recall": 1.0,
       "precision": 1.0,
@@ -56,6 +60,7 @@
     {
       "table": 5,
       "gold_page": 8,
+      "page_scoped": true,
       "n_numbers": 8,
       "recall": 0.0,
       "precision": 0.0,
@@ -67,6 +72,7 @@
     {
       "table": 6,
       "gold_page": 8,
+      "page_scoped": true,
       "n_numbers": 54,
       "recall": 0.8888888888888888,
       "precision": 1.0,
@@ -79,6 +85,7 @@
     {
       "table": 7,
       "gold_page": 19,
+      "page_scoped": true,
       "n_numbers": 24,
       "recall": 1.0,
       "precision": 1.0,

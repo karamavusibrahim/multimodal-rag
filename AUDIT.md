@@ -368,3 +368,59 @@ producer.
   by the same reviewer trick (mutate, run, watch it stay green).
 - **README no longer publishes a literal test count.** It went stale three
   passes running (45 → 51 → 53); the suite is the source of truth.
+
+
+---
+
+## Eighth pass
+
+Two independent reviews of the seventh pass (3 and 4 September) agreed on
+the open list. Fixed, each pinned:
+
+- **Scaffold detection by key position, not by punctuation.** The
+  seventh-pass '":' signature rejected prose that quoted a label
+  ('[Definition] "Precision": the fraction ...'), and the three-word floor
+  rejected short real prose ("[Draft] Results"). A broken container is now
+  recognised by a quoted key immediately after the opening bracket(s) or
+  inside an object; prose keeps everything with at least one word in it.
+  Both the earlier truncated shapes and the new prose shapes are tested.
+- **`%g` collisions.** 1234567 and 1234568 both normalised to 1.23457e+06,
+  so a seven-digit transcription off by one scored correct. Fifteen
+  significant digits now; formatting still collapses (12.30 = 12.3, -0 = 0).
+  Rescoring both artifacts offline changed no number.
+- **Partial page maps.** A table absent from the map got no eligible
+  candidates and scored zero silently. Unmapped tables now match anywhere
+  and every row records `page_scoped`; the artifacts were regenerated to
+  carry the flag (all true for this paper) with every metric unchanged.
+- **Box provenance.** Crop transcripts record the detector's own box index,
+  not the index after confidence filtering. The committed artifact was saved
+  at threshold 0.0, so its indices were already the detector's.
+- **Unbraced `\input file`.** Followed like the braced form; a tar-built
+  test pins both.
+- **Detection truth is not hardcoded.** `detection.py` takes the reference
+  pages from `--table-pages`, else the ground-truth page map, else the RAG
+  paper constant only for the RAG paper, and refuses another PDF without a
+  reference. The artifact records which source was used.
+- **Calendar-unit period labels** (Week-2024, Month-2024) keep their year.
+- **The text-arm MRR interval is reproducible.** A reviewer set table 5's
+  unknown contribution to zero and got 0.375; every page is in the ranking,
+  so the unknown rank lies in [4, 19] and the interval is [0.383, 0.411].
+  `mrr_bounds()` computes it, a test recomputes it from the committed
+  artifact, and the artifact's note now states the derivation.
+- **Docs**: seven gradeable tables everywhere (two places still said six);
+  table 6's token count is 54 under current rules (the "59" was an earlier
+  rule set, under the old numbering); crop transcription is described as
+  run and scored, not open; the ViDoRe "mid-80s" figure is withdrawn in
+  favour of a citation, since nothing here can check it.
+
+Added, optional, unmeasured: late-interaction (MaxSim) scoring and token
+pooling for ColPali-class page embeddings, with an eval script that scores
+user-supplied patch arrays against the same gold as the visual arm. No
+hosted multi-vector encoder, no committed embeddings, no number — README
+and REPORT §6.3 say exactly that.
+
+Still open: the visual arm's query vectors were never committed (bounds,
+not a point, for text MRR); `detection.json` predates the
+`confident_counts` fields its producer now writes and cannot be regenerated
+offline; one-to-many matching (one crop scoring against two source tables)
+is reported as it is.

@@ -24,6 +24,37 @@ def run(reply: str) -> list[dict[str, str]]:
         return extract_page(b"", model="test")
 
 
+class TestScaffoldBoundary:
+    """Broken JSON is recognised by where its quoted key sits, not by whether
+    the reply contains a quote and a colon."""
+
+    def test_prose_quoting_a_label_is_indexed(self):
+        for reply in (
+            '[Definition] "Precision": the fraction of retrieved items that are relevant.',
+            '[Draft] The label "Result": this page contains useful prose.',
+        ):
+            assert run(reply) == [{"kind": "text", "content": reply}], reply
+
+    def test_short_bracket_leading_prose_is_indexed(self):
+        assert run("[Draft] Results") == [{"kind": "text", "content": "[Draft] Results"}]
+
+    def test_truncated_containers_are_still_rejected(self):
+        for reply in (
+            "{'elements': [{'kind': 'text', 'content': 'This page contains useful "
+            "prose about retrieval and generation",
+            '[{"kind": "text", "content": "This page contains useful prose about '
+            'retrieval and generation and more words here',
+            '{"elements": []}',
+            "{'content': 'x'",
+        ):
+            assert run(reply) == [], reply
+
+    def test_a_wordless_reply_is_not_content(self):
+        assert run("[1]") == []
+        assert run("[1] prose about things") == [
+            {"kind": "text", "content": "[1] prose about things"}]
+
+
 def test_content_as_a_bare_string_stays_one_element():
     out = run('{"content": "%s"}' % PROSE)
     assert out == [{"kind": "text", "content": PROSE}]
